@@ -1,0 +1,58 @@
+OBJ_BANK_5:
+.addr OBJ_SANTA_HH_DOOR
+.addr OBJ_SANTA_HH_DOOR
+.addr OBJ_SANTA_PRESENT
+.addr OBJ_SANTA_PRESENT2
+.addr OBJ_SANTA_PRESENT3
+.addr OBJ_SANTA_PRESENT4
+.addr OBJ_SANTA_BOSS
+.addr OBJ_SANTA_BOSS_FLAME
+.addr OBJ_SANTA_EXIT
+.addr 0
+
+OBJ_SANTA_HH_DOOR:
+objectDef OBJ_TYPE::DOOR, $71, DIRECTIONS::LEFT, $8a
+doorArgDef 7, $35, DIRECTIONS::LEFT, $9a
+
+OBJ_SANTA_PRESENT:
+objectDef $20, $74, 0, $80
+.addr SPRITEDEF_PRESENT ;sprite
+.byte 61 ;item
+.byte $e8 ;flag
+OBJ_SANTA_PRESENT2:
+objectDef $20, $7d, 0, $98
+.addr SPRITEDEF_PRESENT ;sprite
+.byte 61 ;item
+.byte $e7 ;flag
+OBJ_SANTA_PRESENT3:
+objectDef $20, $8f, 0, $9b
+.addr SPRITEDEF_PRESENT ;sprite
+.byte 63 ;item
+.byte $e6 ;flag
+OBJ_SANTA_PRESENT4:
+objectDef $20, $92, 0, $80
+.addr SPRITEDEF_PRESENT ;sprite
+.byte 65 ;item
+.byte $e5 ;flag
+
+;;boss
+OBJ_SANTA_BOSS:
+objectDef OBJ_TYPE::TRIGGER, $bd, DIRECTIONS::DOWN, $9e
+OBJ_IS_NOT_FLAG $F4, @no_more-OBJ_SANTA_BOSS
+OBJ_STOP
+@no_more:
+OBJ_DIALOGUE UMSG::MTITOI_TEDDY_SLEEP
+OBJ_BATTLE (BATTLE_EVILSANTA-BATTLES_START)/$A
+OBJ_SET_FLAG $f4
+OBJ_SUBROUTINE obj_bossfinisher_subr, 0
+OBJ_STOP
+
+OBJ_SANTA_BOSS_FLAME:
+objectDef OBJ_TYPE::STATIONARY_NPC_CHECKSPAWN, $ba, DIRECTIONS::UP, $9a
+.addr SPRITEDEF_FLAME ;sprite
+OBJ_FLAG_DISAPPEAR $f4
+OBJ_STOP
+
+OBJ_SANTA_EXIT:
+objectDef OBJ_TYPE::DOOR, $be, DIRECTIONS::RIGHT, $9e
+doorArgDef 7, $25, DIRECTIONS::DOWN, $a5

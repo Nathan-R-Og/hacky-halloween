@@ -1,0 +1,194 @@
+;there are ABSOLUTELY no differences between jp/battles and us/battles
+;super cool !!
+
+;ENEMYID is a conscious decision to make id's dependant on offset
+;(since it's basically an array, anyways)
+;specifically to aid in shifting and general reordering.
+.define ENEMYID(ta) .LOBYTE((ta-STATS_START)/$20)
+.scope ENEMIES
+    NONE = $FF
+    UNKENEMY0 = ENEMYID(STATS_UNKENEMY0) ;$0
+    NKRSMONST = ENEMYID(STATS_NKRSMONST) ;$1
+    DEMON = ENEMYID(STATS_DEMON) ;$2
+    STINKYGHOST = ENEMYID(STATS_STINKYGHOST) ;$3
+    HEART = ENEMYID(STATS_HEART) ;$4
+    ALLINGNOURE = ENEMYID(STATS_ALLINGNOURE) ;$5
+    FACE = ENEMYID(STATS_FACE) ;$6
+    EOTH = ENEMYID(STATS_EOTH) ;$7
+    EGGER = ENEMYID(STATS_EGGER) ;$8
+    EVIL_SANTA = ENEMYID(STATS_EVIL_SANTA) ;$9
+    HATEFUL_CROW = ENEMYID(STATS_HATEFUL_CROW) ;$a
+    SPIREAL = ENEMYID(STATS_SPIREAL) ;$b
+    TOTKID = ENEMYID(STATS_TOTKID) ;$c
+    ZAMBIE = ENEMYID(STATS_ZAMBIE) ;$d
+    SCAREDYCROW = ENEMYID(STATS_SCAREDYCROW) ;$e
+    CRUMBL = ENEMYID(STATS_CRUMBL) ;$f
+    WRAITH = ENEMYID(STATS_WRAITH) ;$10
+    HORROR = ENEMYID(STATS_HORROR) ;$11
+.endscope
+
+.enum MUSIC
+    BATTLE_FLIPPANT = 2
+    BATTLE_DANGEROUS = 3
+    BATTLE_HIPPIE = 4
+.endenum
+
+;eeeppppp
+.define battlebyte8(position, encounter) .byte (encounter << 5) | position
+;mmmmpppp
+.define battlebyte9(palette, music) .byte (music << 4) | palette
+
+BATTLES_START:
+;null/default
+BATTLE_NULL:
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::UNKENEMY0,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 3, 0
+battlebyte9 0, MUSIC::BATTLE_DANGEROUS
+
+BATTLE_NKRSMONST:
+.byte ENEMIES::NKRSMONST,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 7
+battlebyte9 0, MUSIC::BATTLE_HIPPIE
+
+BATTLE_DEMON:
+.byte ENEMIES::DEMON,$00
+.byte ENEMIES::DEMON,$00
+.byte ENEMIES::DEMON,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 10, 0
+battlebyte9 1, MUSIC::BATTLE_DANGEROUS
+
+BATTLE_STINKYGHOST:
+.byte ENEMIES::STINKYGHOST,$00
+.byte ENEMIES::STINKYGHOST,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 7, 0
+battlebyte9 0, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_HEART:
+.byte ENEMIES::HEART,$00
+.byte ENEMIES::HEART,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 7, 0
+battlebyte9 1, MUSIC::BATTLE_DANGEROUS
+
+BATTLE_ALLINGNOURE:
+.byte ENEMIES::ALLINGNOURE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 0
+battlebyte9 1, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_FACE:
+.byte ENEMIES::FACE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 7
+battlebyte9 2, MUSIC::BATTLE_HIPPIE
+
+BATTLE_EOTH:
+.byte ENEMIES::EOTH,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 7
+battlebyte9 1, MUSIC::BATTLE_HIPPIE
+
+BATTLE_EGGER:
+.byte ENEMIES::EGGER,$00
+.byte ENEMIES::EGGER,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 7, 0
+battlebyte9 0, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_EVILSANTA:
+.byte ENEMIES::EVIL_SANTA,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 7
+battlebyte9 2, MUSIC::BATTLE_HIPPIE
+
+BATTLE_HATEFULCROWS:
+.byte ENEMIES::HATEFUL_CROW,$00
+.byte ENEMIES::HATEFUL_CROW,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 7, 0
+battlebyte9 1, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_SPIREAL:
+.byte ENEMIES::SPIREAL,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 0
+battlebyte9 0, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_TOTKID:
+.byte ENEMIES::TOTKID,$00
+.byte ENEMIES::TOTKID,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 7, 0
+battlebyte9 1, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_ZAMBIES:
+.byte ENEMIES::ZAMBIE,$00
+.byte ENEMIES::ZAMBIE,$00
+.byte ENEMIES::ZAMBIE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 10, 0
+battlebyte9 0, MUSIC::BATTLE_DANGEROUS
+
+BATTLE_SCAREDYCROW:
+.byte ENEMIES::SCAREDYCROW,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 0
+battlebyte9 1, MUSIC::BATTLE_FLIPPANT
+
+BATTLE_CRUMBL:
+.byte ENEMIES::CRUMBL,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 0, 0
+battlebyte9 2, MUSIC::BATTLE_DANGEROUS
+
+BATTLE_WRAITHS:
+.byte ENEMIES::WRAITH,$00
+.byte ENEMIES::WRAITH,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 7, 0
+battlebyte9 3, MUSIC::BATTLE_DANGEROUS
+
+BATTLE_HORROR:
+.byte ENEMIES::HORROR,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+.byte ENEMIES::NONE,$00
+battlebyte8 13, 5
+battlebyte9 3, 5
+
+;.repeat 147
+;.byte ENEMIES::SCAREDYCROW,$00
+;.byte ENEMIES::NONE,$00
+;.byte ENEMIES::NONE,$00
+;.byte ENEMIES::NONE,$00
+;battlebyte8 0, 0
+;battlebyte9 0, MUSIC::BATTLE_DANGEROUS
+;.endrepeat
