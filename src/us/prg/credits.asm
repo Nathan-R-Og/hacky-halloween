@@ -154,6 +154,7 @@ credits_lut:
     .addr credits_cmd_draw_text-1 ; [11 AA BB (CC*??)]        - Display text
     .addr credits_cmd_draw_text_xy-1 ; [12 AA BB CC DD]          - Display text with a position
     .addr credits_cmd_fade_in-1 ; [13]                      - Fades in
+    .addr credits_cmd_delay_real-1 ; [14]                      - Fades in
 
 credits_cmd_delay:
     ;get next byte
@@ -188,6 +189,30 @@ credits_cmd_delay:
     lda #.HIBYTE(Credits_end)
     sta UNK_40+1
 
+    rts
+
+credits_cmd_delay_real:
+    ;get next byte
+    iny
+    lda (UNK_40), y
+
+    ;x = a
+    tax
+
+    ;do ppu syncs until x == 0
+    @loop:
+
+
+    jsr PpuSync
+    lda #1
+    sta UNK_E5
+    dex
+    bne @loop
+
+    ;get next byte
+    iny
+
+    ;bye
     rts
 
 ;wait until button pressed?
@@ -725,6 +750,8 @@ credits_generic_sprite_pal:
 
 .define ENDING_CMD_13_FADEIN .byte $13
 
+.define ENDING_CMD_14_DELAYREAL(frames) .byte $14, frames
+
 ;byte code begin
 Credits_Script:
     ENDING_CMD_0B_PLAYSFX 8
@@ -1004,11 +1031,11 @@ ActualCredits_Script:
         .byte $0F,$02,$0c,$1c
         .byte $0F,$3A,$24,$1A
         .byte $0F,$3A,$30,$12
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
     ;ninten
     ENDING_CMD_09_INITSPRITE 0, $04, $40, $C0, SPRITEDEF_0
     ;ana
@@ -1025,12 +1052,12 @@ ActualCredits_Script:
         ENDING_CMD_0A_MOVESPRITE 1, 4, 0, -1
         ENDING_CMD_0A_MOVESPRITE 2, 4, 0, -1
         ENDING_CMD_0A_MOVESPRITE 3, 4, 0, -1
-        ENDING_CMD_01_DELAY 8
+        ENDING_CMD_14_DELAYREAL 8
         ENDING_CMD_0A_MOVESPRITE 0, -4, 0, -1
         ENDING_CMD_0A_MOVESPRITE 1, -4, 0, -1
         ENDING_CMD_0A_MOVESPRITE 2, -4, 0, -1
         ENDING_CMD_0A_MOVESPRITE 3, -4, 0, -1
-        ENDING_CMD_01_DELAY 8
+        ENDING_CMD_14_DELAYREAL 8
     ENDING_CMD_0F_ENDLOOP @walkup
     ENDING_CMD_0A_MOVESPRITE 0, 0, 0, 0
     ENDING_CMD_0A_MOVESPRITE 1, 0, 0, 0
@@ -1041,7 +1068,7 @@ ActualCredits_Script:
     ENDING_CMD_0E_BEGINLOOP 60
     @CREDITS_loop_unk2C:
         ENDING_CMD_02 1
-        ENDING_CMD_01_DELAY 2
+        ENDING_CMD_14_DELAYREAL 2
     ENDING_CMD_0F_ENDLOOP @CREDITS_loop_unk2C
 
     ENDING_CMD_0A_MOVESPRITE 0, 0, 0, 1
@@ -1051,21 +1078,21 @@ ActualCredits_Script:
     ENDING_CMD_0E_BEGINLOOP 32
     @looper2:
         ENDING_CMD_02 1
-        ENDING_CMD_01_DELAY 2
+        ENDING_CMD_14_DELAYREAL 2
     ENDING_CMD_0F_ENDLOOP @looper2
     ENDING_CMD_0A_MOVESPRITE 0, 0, 0, 0
     ENDING_CMD_0A_MOVESPRITE 1, 0, 0, 0
     ENDING_CMD_0A_MOVESPRITE 2, 0, 0, 0
     ENDING_CMD_0A_MOVESPRITE 3, 0, 0, 0
 
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
 
     ENDING_CMD_05_LOADBG2MAP $2144, 24, 4
         .incbin "../../edit/real_credits_jj.tilemap"
@@ -1075,15 +1102,15 @@ ActualCredits_Script:
         .byte %01010000, %01010000, %01010000, %01010000, %01010000, %01010000
 
 
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
-    ENDING_CMD_01_DELAY 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
+    ENDING_CMD_14_DELAYREAL 240
 
     ENDING_CMD_05_LOADBG2MAP $224e, 6, 1
         .byte $e1, $e2, $e3, $e4, $e5, $e6
