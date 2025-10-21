@@ -1,6 +1,3 @@
-
-import subprocess
-from glob import glob
 import os
 import shutil
 import tools.yamlSplit
@@ -69,17 +66,6 @@ def splitMerger():
         shutil.copyfile(file, new_file)
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Configure the project")
-    parser.add_argument(
-        "-d",
-        "--disassemble",
-        help="Disassemble the rom's banks",
-        action="store_true",
-    )
-
-    args = parser.parse_args()
-
     if os.path.exists("split/"):
         shutil.rmtree("split/")
 
@@ -88,18 +74,3 @@ if __name__ == "__main__":
 
     tools.sameFileRetriever.do()
     splitMerger()
-
-    ##convert to asm from those banks
-
-    if os.path.exists("disasm/"):
-        shutil.rmtree("disasm/")
-    if args.disassemble:
-        os.makedirs("disasm/prg")
-        os.makedirs("disasm/chr")
-
-        infos = glob("infos/**/*.cfg")
-        for info in infos:
-            file = info.replace("infos", "split/us").replace(".cfg", ".bin")
-            if not os.path.exists(file): continue
-            print(f"disasm {file}")
-            subprocess.run(f"da65 -i {info} {file}", shell = True, executable="/bin/bash")

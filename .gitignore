@@ -8,3 +8,6 @@ linked_m.dbg
 *.o
 __pycache__
 tools/outputs
+
+*.bps
+headers/

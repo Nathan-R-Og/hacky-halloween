@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    branches:
+      - main
+
+jobs:
+  build_repo:
+    name: Build repo
+    runs-on: ubuntu-latest
+
+    strategy:
+        fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: fix submodule repos
+      run: git submodule update --remote
+
+    - name: Install package requirements
+      run: chmod +x install && ./install
+
+    - name: Get extra deps
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ secrets.SECRETREPO }}
+        token: ${{ secrets.SECRETREPOKEY }}
+        path: ci_repo
+    - name: Get the dep
+      run: cp ci_repo/mother/* .
+
+    - name: Setup
+      run: chmod +x configure && ./configure
+
+    - name: Build US
+      run: chmod +x build && ./build
+
+    - name: Output patches
+      run: ./make_patch && ./make_patch -i
+
+    - name: Upload NES 2.0 patch
+      uses: actions/upload-artifact@v4
+      with:
+        name: hacky_halloween_nes2.0.bps
+        path: hacky_halloween_nes2.0.bps
+
+    - name: Upload INES patch
+      uses: actions/upload-artifact@v4
+      with:
+        name: hacky_halloween_ines.bps
+        path: hacky_halloween_ines.bps
