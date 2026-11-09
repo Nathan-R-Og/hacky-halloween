@@ -19,9 +19,12 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
-        ref: ${{ github.event.pull_request.head.sha }}
+      #with:
+      #  submodules: 'recursive'
+      #  ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: distroot is down
+      run: git submodule update --init --recursive cc65
 
     - name: fix submodule repos
       run: git submodule update --remote cc65
