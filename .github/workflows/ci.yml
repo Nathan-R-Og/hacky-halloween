@@ -24,7 +24,7 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha }}
 
     - name: fix submodule repos
-      run: git submodule update --remote
+      run: git submodule update --remote cc65
 
     - name: Install package requirements
       run: chmod +x install && ./install
