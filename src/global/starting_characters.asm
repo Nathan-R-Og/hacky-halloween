@@ -32,14 +32,14 @@ Ninten_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_INTERACTABLE | OBJECT_M_BF1_CHANGEDIR) | 4
 ;sprite
-.addr SPRITEDEF_0
+.addr SPRITEDEF_NINTEN
 ;items
 .byte 19,47,50,51,$00,$00,$00,$00
 ;weapon, coin, ring, pendant
-.byte 0,0,0,0
+.byte $00,$00,$00,$00
 
 ;breadcrumb coords
 .ifdef VER_JP
@@ -86,14 +86,14 @@ Ana_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_INTERACTABLE | OBJECT_M_BF1_CHANGEDIR) | 4
 ;sprite
-.addr SPRITEDEF_8
+.addr SPRITEDEF_ANA
 ;items
 .byte 22,47,50,52,$00,$00,$00,$00
 ;weapon, coin, ring, pendant
-.byte 0,0,0,0
+.byte $00,$00,$00,$00
 
 ;breadcrumb coords
 .ifdef VER_JP
@@ -101,6 +101,7 @@ doorArgDef 0, 0, DIRECTIONS::UP, 0
 .else
 doorArgDef $12, $21, DIRECTIONS::LEFT, $BE
 .endif
+
 ;psi table
 .byte %01000000, %01110000
 .byte %11111111, %11111111
@@ -139,14 +140,14 @@ Lloyd_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_INTERACTABLE | OBJECT_M_BF1_CHANGEDIR) | 4
 ;sprite
-.addr SPRITEDEF_10
+.addr SPRITEDEF_LLOYD
 ;items
 .byte 15,47,50,53,34,$00,$00,$00
 ;weapon, coin, ring, pendant
-.byte 0,0,0,0
+.byte $00,$00,$00,$00
 
 ;breadcrumb coords
 .ifdef VER_JP
@@ -194,14 +195,14 @@ Teddy_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_INTERACTABLE | OBJECT_M_BF1_CHANGEDIR) | 4
 ;sprite
-.addr SPRITEDEF_18
+.addr SPRITEDEF_TEDDY
 ;items
 .byte 13,47,50,54,$00,$00,$00,$00
 ;weapon, coin, ring, pendant
-.byte 0,0,0,0
+.byte $00,$00,$00,$00
 
 ;breadcrumb coords
 .ifdef VER_JP
@@ -248,10 +249,10 @@ Pippi_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_INTERACTABLE | OBJECT_M_BF1_CHANGEDIR) | 4
 ;sprite
-.addr SPRITEDEF_20
+.addr SPRITEDEF_PIPPI
 ;items
 .byte $00,$00,$00,$00,$00,$00,$00,$00
 ;weapon, coin, ring, pendant
@@ -302,10 +303,10 @@ EVE_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_CHANGEDIR | OBJECT_M_BF1_HIGHPRIORITY) | 10
 ;sprite
-.addr SPRITEDEF_58
+.addr SPRITEDEF_EVE
 ;items
 .byte $00,$00,$00,$00,$00,$00,$00,$00
 ;weapon, coin, ring, pendant
@@ -356,10 +357,10 @@ FlyingMan_Data:
 .byte $00,$00
 ;object type if lead?
 .byte OBJ_TYPE::PLAYER
-;object_m_bitfield1 | object_m_oam
+;object_m_bitfield1 | object_m_tiles
 .byte (OBJECT_M_BF1_INTERACTABLE | OBJECT_M_BF1_CHANGEDIR) | 4
 ;sprite
-.addr SPRITEDEF_50
+.addr SPRITEDEF_FLYINGMAN
 ;items
 .byte $00,$00,$00,$00,$00,$00,$00,$00
 ;weapon, coin, ring, pendant

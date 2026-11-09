@@ -33,6 +33,42 @@
     GOD = 1 << 7
 .endenum
 
+.struct enemy_struct
+    unk_0 .byte ;0
+    status .byte ;1
+    flags .byte ;2
+    .union ;3-4
+        hp .word
+        palette_index .word
+        tilemap .word
+    .endunion
+    .union ;5-6
+        pp .word
+        sprite_gfx .word
+    .endunion
+    .union ;7-8
+        offense .word
+        final_action .word
+        altitude .word
+    .endunion
+    .union ;9-A
+        defense .word
+        defeat_message .word
+        unk_param .word
+    .endunion
+    fight .byte ;B
+    speed .byte ;C
+    wisdom .byte ;D
+    strength .byte ;E
+    force .byte ;F
+    moveset .res 8 ;10-17
+    name .addr ;18-19
+    exp .word ;1A-1B
+    money .word ;1C-1D
+    item_drop .byte ;1E
+    graphic_page .byte ;1F
+.endstruct
+
 ;https://datacrystal.tcrf.net/wiki/EarthBound_Beginnings/Enemy_data
 ;enemy health can range from 0-$3ff (inclusive)
 ;ggggsshhhhhhhhhh
@@ -48,6 +84,7 @@
 .define ething4(defense, messageDefeat, unkParam) .word (unkParam<<13) | (messageDefeat<<10) | defense
 
 STATS_START:
+
 STATS_UNKENEMY0:
     .byte $0
     ;init status
@@ -83,9 +120,9 @@ STATS_NKRSMONST:
     .byte $00
     ;flags
     .byte ENEMY_FLAGS::GOD
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 600, 0, 0
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 150, 0
     ;offense, finalAction, altitude
     ething3 200, 0, 0
@@ -112,9 +149,9 @@ STATS_DEMON:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 100, 0, 1
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 50, 0
     ;offense, finalAction, altitude
     ething3 50, 0, 0
@@ -141,9 +178,9 @@ STATS_STINKYGHOST:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 300, 2, 9
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 50, 0
     ;offense, finalAction, altitude
     ething3 110, 0, 0
@@ -170,9 +207,9 @@ STATS_HEART:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 150, 0, 5
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 100, 0
     ;offense, finalAction, altitude
     ething3 100, 0, 0
@@ -199,9 +236,9 @@ STATS_ALLINGNOURE:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 200, 0, 6
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 50, 0
     ;offense, finalAction, altitude
     ething3 150, 0, 0
@@ -228,9 +265,9 @@ STATS_FACE:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::GOD
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 999, 1, 8
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 500, 0
     ;offense, finalAction, altitude
     ething3 150, 0, 0
@@ -257,9 +294,9 @@ STATS_EOTH:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::GOD
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 500, 0, 3
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 100, 0
     ;offense, finalAction, altitude
     ething3 175, 0, 0
@@ -286,9 +323,9 @@ STATS_EGGER:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 120, 1, 5
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 50, 0
     ;offense, finalAction, altitude
     ething3 40, 0, 0
@@ -315,9 +352,9 @@ STATS_EVIL_SANTA:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::GOD
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 500, 0, 3
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 60, 0
     ;offense, finalAction, altitude
     ething3 150, 0, 0
@@ -344,9 +381,9 @@ STATS_HATEFUL_CROW:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 120, 1, 4
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 0, 0
     ;offense, finalAction, altitude
     ething3 125, 0, 0
@@ -373,9 +410,9 @@ STATS_SPIREAL:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 100, 2, 3
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 0, 0
     ;offense, finalAction, altitude
     ething3 100, 0, 0
@@ -402,9 +439,9 @@ STATS_TOTKID:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 200, 0, 4
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 0, 0
     ;offense, finalAction, altitude
     ething3 150, 0, 0
@@ -431,9 +468,9 @@ STATS_ZAMBIE:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 250, 1, 2
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 0, 0
     ;offense, finalAction, altitude
     ething3 100, 0, 0
@@ -460,9 +497,9 @@ STATS_SCAREDYCROW:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 350, 2, 2
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 0, 0
     ;offense, finalAction, altitude
     ething3 110, 0, 0
@@ -489,9 +526,9 @@ STATS_CRUMBL:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 300, 2, 7
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 100, 0
     ;offense, finalAction, altitude
     ething3 200, 0, 0
@@ -518,9 +555,9 @@ STATS_WRAITH:
     .byte $0
     ;flags
     .byte ENEMY_FLAGS::NONE
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 250, 0, 7
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 25, 0
     ;offense, finalAction, altitude
     ething3 150, 0, 0
@@ -547,9 +584,9 @@ STATS_HORROR:
     .byte $00
     ;flags
     .byte ENEMY_FLAGS::UNK
-    ;health, palindex, tilemap
+    ;health, subpal, gtile
     ething1 50, 1, $a
-    ;pp, spr_gfx
+    ;pp, gfx
     ething2 0, 1
     ;offense, finalAction, altitude
     ething3 20, 0, 0

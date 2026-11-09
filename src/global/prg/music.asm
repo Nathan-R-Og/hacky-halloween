@@ -1,3 +1,10 @@
+; variables for music engine
+; defined in ram.asm
+; sfx_framecounter = unk_7e0
+
+; end
+
+
 ;Oct  C  C#   D  D#   E   F  F#   G  G#   A  A#   B  Max Detune at B
 ;1:                                       0*         0.96 cents
 ;2:   2   3   4   5   6   7   8   9   a   b   c   d  1.91 cents
@@ -29,6 +36,7 @@
 .define Note_Rest .byte $2 ; == 1
 
 .define Note_Noise(dmc_cmd, noise_cmd) .byte (dmc_cmd << 6) | noise_cmd
+.define Noise_Rest Note_Noise 0, 1
 
 .define nl_sixteenth 0
 .define nl_eighth 1
@@ -73,105 +81,150 @@
 .define timbre_c_square(duty, no_length, vol_or_decay, v) (duty << 6) | (no_length << 5) | (vol_or_decay << 4) | v
 .define timbre_c_triangle(autodisable, frames) (autodisable << 7) | frames
 
+; control registers macro for 2a03 channels ($4000-$4013, 4 each)
+; Pulse
+;   DDLC VVVV - Duty, Length Freeze, Constant Volume, Volume
+;   EPPP NSSS - Sweep Enabled, Period, Negate, Shift
+;   TTTT TTTT - Timer Low
+;   LLLL LTTT - Length Counter, Timer High
+.macro SQ_CTRL duty, length_freeze, constant_volume, volume_decay, sweep_enabled, period, negate, shift, timer, length_counter_load
+    timer_lo = (timer & $ff)
+    timer_hi = ((timer >> 8) & $07)
+    .byte (duty << 6) | (length_freeze << 5) | (constant_volume << 4) | volume_decay
+    .byte (sweep_enabled << 7) | (period << 4) | (negate << 3) | shift
+    .byte timer_lo
+    .byte (length_counter_load << 3) | timer_hi
+.endmacro
+
+; Triangle
+;   CRRR RRRR - Linear Counter Control, Linear Counter Load
+;   ---- ---- - unused
+;   TTTT TTTT - Timer Low
+;   LLLL LTTT - Length Counter Load, Timer High
+.macro TRI_CTRL linear_counter_control, linear_counter_load, timer, length_counter_load
+    timer_lo = (timer & $ff)
+    timer_hi = ((timer >> 8) & $07)
+    .byte (linear_counter_control << 7) | linear_counter_load
+    .byte 0
+    .byte timer_lo
+    .byte (length_counter_load << 3) | timer_hi
+.endmacro
+
+; Noise
+;   --LC VVVV - LC Halt, Constant Volume, Volume
+;   ---- ---- - unused
+;   M--- PPPP - noise Mode, noise Period
+;   LLLL L--- - Length counter load
+.macro NOI_CTRL lc_halt, constant_vol, volume, mode, period, load
+    .byte (lc_halt << 5) | (constant_vol << 4) | volume
+    .byte 0
+    .byte (mode << 7) | period
+    .byte (load << 5)
+.endmacro
+
+; dmc ...
+
 .segment        "MUSIC": absolute
 ;.segment        "PRG1C": absolute
 
 ; $8000
 ; Sound driver
-B28_0000:
+Music_Tick: ;tick
     jmp B28_0277
+
 B28_0003:
     jmp B28_0299
-B28_0006:
+
+Music_Init: ;init
     jmp B28_0216
 
 
 SFXPointerTables:
-NoiseSFXTable_SetUp:
-    .addr NoiseSFX_Hit_SetUp ; 01
-    .addr NoiseSFX_Bomb_SetUp ; 02
-    .addr NoiseSFX_Thunder_SetUp ; 03
-    .addr NoiseSFX_Fire_SetUp ; 04
-    .addr NoiseSFX_Crit_SetUp ; 05
-    .addr NoiseSFX_EnemyKilled_SetUp ; 06
-    .addr NoiseSFX_Unk07_SetUp ; 07
-    .addr NoiseSFX_Stairs_SetUp ; 08
-    .addr NoiseSFX_Rocket_SetUp ; 09
-    .addr NoiseSFX_RocketLand_SetUp ; 0A
-NoiseSFXTable_Continue:
-    .addr NoiseSFX_Hit_Continue ; 01
-    .addr NoiseSFX_Bomb_Continue ; 02
-    .addr NoiseSFX_Thunder_Continue ; 03
-    .addr NoiseSFX_Fire_Continue ; 04
-    .addr NoiseSFX_Crit_Continue ; 05
-    .addr NoiseSFX_EnemyKilled_Continue ; 06
-    .addr NoiseSFX_Unk07_RocketLand_Continue ; 07
-    .addr NoiseSFX_Stairs_Continue ; 08
-    .addr NoiseSFX_Rocket_Continue ; 09
-    .addr NoiseSFX_Unk07_RocketLand_Continue ; 0A
+    NoiseSFXTable_SetUp:
+        .addr NoiseSFX_Hit_SetUp ; 01
+        .addr NoiseSFX_Bomb_SetUp ; 02
+        .addr NoiseSFX_Thunder_SetUp ; 03
+        .addr NoiseSFX_Fire_SetUp ; 04
+        .addr NoiseSFX_Crit_SetUp ; 05
+        .addr NoiseSFX_EnemyKilled_SetUp ; 06
+        .addr NoiseSFX_Unk07_SetUp ; 07
+        .addr NoiseSFX_Stairs_SetUp ; 08
+        .addr NoiseSFX_Rocket_SetUp ; 09
+        .addr NoiseSFX_RocketLand_SetUp ; 0A
+    NoiseSFXTable_Continue:
+        .addr NoiseSFX_Hit_Continue ; 01
+        .addr NoiseSFX_Bomb_Continue ; 02
+        .addr NoiseSFX_Thunder_Continue ; 03
+        .addr NoiseSFX_Fire_Continue ; 04
+        .addr NoiseSFX_Crit_Continue ; 05
+        .addr NoiseSFX_EnemyKilled_Continue ; 06
+        .addr NoiseSFX_Unk07_RocketLand_Continue ; 07
+        .addr NoiseSFX_Stairs_Continue ; 08
+        .addr NoiseSFX_Rocket_Continue ; 09
+        .addr NoiseSFX_Unk07_RocketLand_Continue ; 0A
 
-PulseGroup0SFXTable_SetUp:
-    .addr PulseGroup0SFX_EnemyAttack_SetUp ; 01
-    .addr PulseGroup0SFX_Beam_SetUp ; 02
-    .addr PulseGroup0SFX_StatBoost_SetUp ; 03
-    .addr PulseGroup0SFX_TakeDamage_SetUp ; 04
-    .addr PulseGroup0SFX_MenuBloop_SetUp ; 05
-    .addr PulseGroup0SFX_ItemDropGet_SetUp ; 06
-    .addr PulseGroup0SFX_Recovery_SetUp ; 07
-    .addr PulseGroup0SFX_Canary_SetUp ; 08
-    .addr PulseGroup0SFX_LearnedPSI_SetUp ; 09
-    .addr PulseGroup0SFX_PlayerAttack_SetUp ; 0A
-    .addr PulseGroup0SFX_Purchase_SetUp ; 0B
-    .addr PulseGroup0SFX_Dodge_SetUp ; 0C
-    .addr PulseGroup0SFX_Unk0D_SetUp ; 0D
-    .addr PulseGroup0SFX_Unk0E_SetUp ; 0E
-    .addr PulseGroup0SFX_Miss_SetUp ; 0F
-    .addr PulseGroup0SFX_MagicantWarp_SetUp ; 10
-    .addr PulseGroup0SFX_Laura_SetUp ; 11
-    .ifndef VER_JP
-        .addr PulseGroup0SFX_XXStone_SetUp ; 12
-    .endif
-PulseGroup0SFXTable_Continue:
-    .addr PulseGroup0SFX_EnemyAttack_Continue ; 01
-    .addr PulseGroup0SFX_Beam_Continue ; 02
-    .addr PulseGroup0SFX_StatBoost_Continue ; 03
-    .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 04
-    .addr PulseGroup0SFX_MenuBloop_Continue ; 05
-    .addr PulseGroup0SFX_ItemDropGet_Continue ; 06
-    .addr PulseGroup0SFX_Recovery_Continue ; 07
-    .addr PulseGroup0SFX_Canary_Laura_Continue ; 08
-    .addr PulseGroup0SFX_LearnedPSI_Continue ; 09
-    .addr PulseGroup0SFX_PlayerAttack_Continue ; 0A
-    .addr PulseGroup0SFX_Purchase_Continue ; 0B
-    .addr PulseGroup0SFX_Dodge_Continue ; 0C
-    .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 0D
-    .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 0E
-    .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 0F
-    .addr PulseGroup0SFX_MagicantWarp_Continue ; 10
-    .addr PulseGroup0SFX_Canary_Laura_Continue ; 11
-    .ifndef VER_JP
-        .addr PulseGroup0SFX_XXStone_Continue ; 12
-    .endif
+    PulseGroup0SFXTable_SetUp:
+        .addr PulseGroup0SFX_EnemyAttack_SetUp ; 01
+        .addr PulseGroup0SFX_Beam_SetUp ; 02
+        .addr PulseGroup0SFX_StatBoost_SetUp ; 03
+        .addr PulseGroup0SFX_TakeDamage_SetUp ; 04
+        .addr PulseGroup0SFX_MenuBloop_SetUp ; 05
+        .addr PulseGroup0SFX_ItemDropGet_SetUp ; 06
+        .addr PulseGroup0SFX_Recovery_SetUp ; 07
+        .addr PulseGroup0SFX_Canary_SetUp ; 08
+        .addr PulseGroup0SFX_LearnedPSI_SetUp ; 09
+        .addr PulseGroup0SFX_PlayerAttack_SetUp ; 0A
+        .addr PulseGroup0SFX_Purchase_SetUp ; 0B
+        .addr PulseGroup0SFX_Dodge_SetUp ; 0C
+        .addr PulseGroup0SFX_Unk0D_SetUp ; 0D
+        .addr PulseGroup0SFX_Unk0E_SetUp ; 0E
+        .addr PulseGroup0SFX_Miss_SetUp ; 0F
+        .addr PulseGroup0SFX_MagicantWarp_SetUp ; 10
+        .addr PulseGroup0SFX_Laura_SetUp ; 11
+        .ifndef VER_JP
+            .addr PulseGroup0SFX_XXStone_SetUp ; 12
+        .endif
+    PulseGroup0SFXTable_Continue:
+        .addr PulseGroup0SFX_EnemyAttack_Continue ; 01
+        .addr PulseGroup0SFX_Beam_Continue ; 02
+        .addr PulseGroup0SFX_StatBoost_Continue ; 03
+        .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 04
+        .addr PulseGroup0SFX_MenuBloop_Continue ; 05
+        .addr PulseGroup0SFX_ItemDropGet_Continue ; 06
+        .addr PulseGroup0SFX_Recovery_Continue ; 07
+        .addr PulseGroup0SFX_Canary_Laura_Continue ; 08
+        .addr PulseGroup0SFX_LearnedPSI_Continue ; 09
+        .addr PulseGroup0SFX_PlayerAttack_Continue ; 0A
+        .addr PulseGroup0SFX_Purchase_Continue ; 0B
+        .addr PulseGroup0SFX_Dodge_Continue ; 0C
+        .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 0D
+        .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 0E
+        .addr PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue ; 0F
+        .addr PulseGroup0SFX_MagicantWarp_Continue ; 10
+        .addr PulseGroup0SFX_Canary_Laura_Continue ; 11
+        .ifndef VER_JP
+            .addr PulseGroup0SFX_XXStone_Continue ; 12
+        .endif
 
-TriangleSFXTable_SetUp:
-    .addr TriangleSFX_Freeze_SetUp ; 01
-    .addr TriangleSFX_Unk02_SetUp ; 02
-    .addr TriangleSFX_PlayerKilled_SetUp ; 03
-    .addr TriangleSFX_Equip_SetUp ; 04
-TriangleSFXTable_Continue:
-    .addr TriangleSFX_Freeze_Continue ; 01
-    .addr TriangleSFX_Unk02_Continue ; 02
-    .addr TriangleSFX_PlayerKilled_Continue ; 03
-    .addr TriangleSFX_Equip_Continue ; 04
+    TriangleSFXTable_SetUp:
+        .addr TriangleSFX_Freeze_SetUp ; 01
+        .addr TriangleSFX_Unk02_SetUp ; 02
+        .addr TriangleSFX_PlayerKilled_SetUp ; 03
+        .addr TriangleSFX_Equip_SetUp ; 04
+    TriangleSFXTable_Continue:
+        .addr TriangleSFX_Freeze_Continue ; 01
+        .addr TriangleSFX_Unk02_Continue ; 02
+        .addr TriangleSFX_PlayerKilled_Continue ; 03
+        .addr TriangleSFX_Equip_Continue ; 04
 
-PulseGroup1SFXTable_SetUp:
-    .addr PulseG1SFX_DimensionSlip_SetUp ; 01
-    .addr PulseG1SFX_Status_SetUp ; 02
-    .addr PulseG1SFX_GiegueAttack_SetUp ; 03
-PulseGroup1SFXTable_Continue:
-    .addr PulseG1SFX_DimensionSlip_Continue ; 01
-    .addr PulseG1SFX_Status_GiegueAttack_Continue ; 02
-    .addr PulseG1SFX_Status_GiegueAttack_Continue ; 03
+    PulseGroup1SFXTable_SetUp:
+        .addr PulseG1SFX_DimensionSlip_SetUp ; 01
+        .addr PulseG1SFX_Status_SetUp ; 02
+        .addr PulseG1SFX_GiegueAttack_SetUp ; 03
+    PulseGroup1SFXTable_Continue:
+        .addr PulseG1SFX_DimensionSlip_Continue ; 01
+        .addr PulseG1SFX_Status_GiegueAttack_Continue ; 02
+        .addr PulseG1SFX_Status_GiegueAttack_Continue ; 03
 
 
 SetSQ1Registers:
@@ -205,14 +258,14 @@ B28_00a3:
     sty unk_b2
     lda #>SFXInstrumentInitData
     sta unk_b3
-    ldy #$00
-    B28_00b1:
+    ldy #0
+    @loop:
     lda (unk_b2), y
     sta (unk_b0), y
     iny
     tya
-    cmp #$04
-    bne B28_00b1
+    cmp #4
+    bne @loop
     rts
 
 .ifdef VER_JP
@@ -254,10 +307,10 @@ SFXTablePtrRead:
     rts
 @load_ptr:
     ; The index is set up, so read from the table
-    lda (unk_b0),Y
+    lda (unk_b0), y
     sta unk_b2
     iny
-    lda (unk_b0),Y
+    lda (unk_b0), y
     sta unk_b3
     jmp @return
 .endif
@@ -290,10 +343,10 @@ B28_00d3:
     inc unk_7da, x
     lda unk_7da, x
     cmp unk_7d5, x
-    bne B28_00e5
-    lda #$00
+    bne @exit
+    lda #0
     sta unk_7da, x
-    B28_00e5:
+    @exit:
     rts
 
 .ifndef VER_JP
@@ -317,24 +370,24 @@ B28_00fa:
 SFXInstrumentInitData:
 
 .byte $16,$7F,$0E,$80
-B28_0104:
+noi_instrument_rockettakeoff:
 .byte $3E,$7F,$0E,$08
-B28_0108:
+noi_instrument_bomb: ; used for hit, crit, bomb
 .byte $1F,$7F,$0F,$C0
-B28_010c:
+noi_instrument_thunder:
 .byte $3F,$7F,$00,$B0
-B28_0110:
+noi_instrument_fire:
 .byte $11,$7F,$0E,$30
-B28_0114:
+noi_instrument_stairs:
 .byte $9B,$7F,$0C,$28
-B28_0118:
+noi_instrument_enemyko:
 .byte $10,$7F,$87,$B0
-B28_011c:
+noi_instrument_rocketland:
 .byte $0A,$7F,$0F,$08
-B28_0120:
-.byte $B0,$7F,$1C,$40
-B28_0124:
-.byte $B0,$7F,$32,$40
+sq2_instrument_teleporting:
+.byte $B0,$7F,$1C,$40   ; Bb7 - B7
+sq1_instrument_teleporting:
+.byte $B0,$7F,$32,$40   ; B6
 B28_0128:
 .byte $B1,$7F,$40,$40
 B28_012c:
@@ -344,56 +397,56 @@ B28_0130:
 B28_0134:
 .byte $B1,$7F,$FF,$47
 .ifndef VER_JP
-B28_0138:
+sq1_instrument_xxstone:
 .byte $1F,$7F,$30,$08
 .endif
-B28_013c:
+sq1_instrument_magicant:
 .byte $1F,$BB,$D4,$08
-B28_0140:
+sq1_instrument_learnedpsi:
 .byte $81,$A7,$E1,$88
-B28_0144:
+sq1_instrument_canarychirp:
 .byte $99,$7F,$15,$88
 B28_0148:
 .byte $9B,$7F,$1F,$88
-B28_014c:
+sq1_instrument_menubloop:
 .byte $D8,$7F,$20,$28
-B28_0150:
+sq1_instrument_menubloop_echo:
 .byte $D1,$7F,$20,$28
-B28_0154:
+sq1_instrument_itemget:
 .byte $D9,$7F,$54,$28
-B28_0158:
+sq1_instrument_statboost:
 .byte $9E,$9D,$C0,$08
-B28_015c:
+sq1_instrument_recovery:
 .byte $9C,$9A,$E8,$08
-B28_0160:
+sq1_instrument_beam:
 .byte $9E,$7F,$40,$08
-B28_0164:
+sq1_instrument_playerattack:
 .byte $94,$C6,$67,$28
-B28_0168:
+sq1_instrument_playerattack_cont:
 .byte $96,$CE,$47,$28
-B28_016c:
+sq1_instrument_enemyattack:
 .byte $D9,$A5,$7B,$F9
 B28_0170:
 .byte $D6,$A5,$90,$F9
 B28_0174:
 .byte $DA,$96,$46,$F9
-B28_0178:
+sq1_instrument_buy:
 .byte $96,$7F,$76,$20
-B28_017c:
+sq1_instrument_buy_cont:
 .byte $82,$7F,$27,$F8
-B28_0180:
+sq1_instrument_dodge:
 .byte $94,$A5,$89,$48
 B28_0184:
 .byte $96,$AD,$7A,$58
-B28_0188:
+sq1_instrument_dodge_cont:
 .byte $93,$A5,$99,$28
-B28_018c:
+sq1_instrument_takedmg:
 .byte $9F,$84,$80,$FA
-B28_0190:
+sq1_instrument_unused0D:
 .byte $94,$84,$24,$18
-B28_0194:
+sq1_instrument_textprinting:
 .byte $94,$7F,$94,$18
-B28_0198:
+sq1_instrument_blindmiss:
 .byte $95,$B4,$57,$F8
 B28_019c:
 .byte $02,$7F,$67,$09
@@ -501,11 +554,11 @@ B28_0216:
     sta currptr_pulse1_blank
     sta unk_78b
 
-    ;copy Ocarina_Missing_List to unk_76c
+    ;copy Ocarina_Missing_List to ntbl_xc
     tay
     @copy:
     lda Ocarina_Missing_List, y
-    sta unk_76c, y
+    sta ntbl_xc, y
     iny
     tya
     cmp #10*2
@@ -548,10 +601,10 @@ B28_0248:
     beq B28_025d
     B28_0251:
     lda #<mus_ocarina_missing
-    sta unk_76e, y
+    sta ntbl_xe, y
     iny
     lda #>mus_ocarina_missing
-    sta unk_76e, y
+    sta ntbl_xe, y
     iny
     B28_025d:
     tya
@@ -560,10 +613,10 @@ B28_0248:
     lsr unk_b0
     bcc B28_0251
     lda B28_0238, y
-    sta unk_76e, y
+    sta ntbl_xe, y
     iny
     lda B28_0238, y
-    sta unk_76e, y
+    sta ntbl_xe, y
     iny
     bne B28_025d
     B28_0276:
@@ -575,12 +628,12 @@ B28_0248:
 InsertLauraPreMelodyTweeting:
     lda soundqueue_track
     cmp #$25
-    bne @B27_0090
+    bne @exit
     jsr B28_0299
     sta soundqueue_track
     lda #PulseG0_Laura
     sta soundqueue_pulseg0
-    @B27_0090:
+    @exit:
     rts
 .endif
 
@@ -597,12 +650,12 @@ B28_0277:
     jsr HandleTriangleSFX
     jsr HandlePulseGroup0SFX
     jsr HandleMusic
-    lda #$00
-    ldx #$06
-    B28_0292:
-    sta soundqueue-1, x ; Clear $07F0-$07F5
+    lda #0
+    ldx #6
+    @loop:
+    sta sram_mode, x ; Clear $07F0-$07F5
     dex
-    bne B28_0292
+    bne @loop
     rts
 
 ;End song?
@@ -611,7 +664,7 @@ B28_0299:
     ; fallthrough
 B28_029c:
     jsr B28_02c6
-    lda #$00
+    lda #0
     sta DMC_RAW
     sta ME_Envelopes0+2
     rts
@@ -627,85 +680,82 @@ B28_02a8:
     ; Set all sounds and music to be inactive
     tay
     @loop:
-    lda #$00
+    lda #0
     sta soundactive, y
     iny
     tya
-    cmp #$06
+    cmp #6
     bne @loop
     rts
 
 B28_02c6:
-    lda #$00
+    lda #0
     sta DMC_RAW
     lda #$10
     sta SQ1_VOL
     sta SQ2_VOL
     sta NOISE_VOL
-    lda #$00
+    lda #0
     sta TRI_LINEAR
     rts
 
-B28_02dc:
+; need A, Y set before calling
+SFX_SetupContinue:
     ldx unk_bd
     sta unk_7d5, x
     txa
     sta unk_7c7, x
     tya
-    beq B28_030a
+    beq SetupCHANNEL
     txa
-    beq B28_0307
-    cmp #$01
-    beq B28_02f8
-    cmp #$02
-    beq B28_02fd
-    cmp #$03
-    beq B28_0302
+    beq SetupNOI
+    cmp #1
+    beq SetupSQ1
+    cmp #2
+    beq SetupSQ2
+    cmp #3
+    beq SetupTRI
     rts
-
-B28_02f8:
+SetupSQ1:
     jsr SetSQ1Registers
-    beq B28_030a ; unconditional branch
-
-B28_02fd:
+    beq SetupCHANNEL ; unconditional branch
+SetupSQ2:
     jsr SetSQ2Registers
-    beq B28_030a ; unconditional branch
-
-B28_0302:
+    beq SetupCHANNEL ; unconditional branch
+SetupTRI:
     jsr SetTRIRegisters
-    beq B28_030a ; unconditional branch
-
-B28_0307:
+    beq SetupCHANNEL ; unconditional branch
+SetupNOI:
     jsr SetNOISERegisters
     ; fallthrough
-B28_030a:
+SetupCHANNEL:
     lda unk_bf
     sta soundactive, x
-    lda #$00
+    lda #0
     sta unk_7da, x
     ; fallthrough
-B28_0314:
+StoreCHANNELVariables:
     sta unk_7df, x
     sta unk_7e3, x
     sta unk_7e7, x
     sta unk_78a
-    B28_0320:
+B28_0320:
     rts
 
 NoiseSFX_RocketLand_SetUp:
     lda #$30
-    ldy #<B28_011c
-    jmp B28_02dc
+    ldy #<noi_instrument_rocketland
+    jmp SFX_SetupContinue
 
 NoiseSFX_Stairs_SetUp:
     lda #$0c
-    ldy #<B28_0114
-    jmp B28_02dc
+    ldy #<noi_instrument_stairs
+    jmp SFX_SetupContinue
 
 NoiseSFX_Stairs_Continue:
     jsr B28_00d3
     bne B28_0320
-    ldy #<B28_0114
+    ldy #<noi_instrument_stairs
     jsr SetNOISERegisters
     inc unk_7df
     lda unk_7df
@@ -715,9 +765,9 @@ NoiseSFX_Stairs_Continue:
 
 NoiseSFX_Unk07_SetUp:
     lda #$04
-    ldy #<B28_0114
-    jsr B28_02dc
-    lda #$02
+    ldy #<noi_instrument_stairs
+    jsr SFX_SetupContinue
+    lda #Triangle_Junk
     sta soundqueue_triangle
 
     lda unk_bb
@@ -730,11 +780,11 @@ SFX_SetNoisePeriod:
 
 NoiseSFX_EnemyKilled_SetUp:
     lda #$06
-    ldy #<B28_0118
-    jsr B28_02dc
-    lda B28_0118+2
+    ldy #<noi_instrument_enemyko
+    jsr SFX_SetupContinue
+    lda noi_instrument_enemyko+2
     sta unk_7df
-    lda B28_0118
+    lda noi_instrument_enemyko
     sta unk_7e3
     B28_036f:
     rts
@@ -761,9 +811,9 @@ NoiseSFX_EnemyKilled_Continue:
 
 NoiseSFX_Thunder_SetUp:
     lda #$05
-    ldy #<B28_010c
-    jsr B28_02dc
-    lda B28_010c+2
+    ldy #<noi_instrument_thunder
+    jsr SFX_SetupContinue
+    lda noi_instrument_thunder+2
     sta unk_7df
     B28_03a0:
     rts
@@ -801,8 +851,8 @@ SFX_SetNoisePeriodFromC1Table:
 
 NoiseSFX_Fire_SetUp:
     lda #$03
-    ldy #<B28_0110
-    jmp B28_02dc
+    ldy #<noi_instrument_fire
+    jmp SFX_SetupContinue
 
 NoiseSFX_Fire_Continue:
     jsr B28_00d3
@@ -817,8 +867,8 @@ NoiseSFX_Fire_Continue:
 
 NoiseSFX_Hit_SetUp:
     lda #$10
-    ldy #<B28_0108
-    jmp B28_02dc
+    ldy #<noi_instrument_bomb
+    jmp SFX_SetupContinue
 
 ; $8009 table, entry 0A
 NoiseSFX_Hit_Continue:
@@ -833,7 +883,7 @@ NoiseSFX_Unk07_RocketLand_Continue:
     jsr B28_00d3
     bne B28_041f
     EndNoiseSFX:
-    lda #$00
+    lda #0
     sta soundactive_noise
     lda #$10
     sta NOISE_VOL
@@ -842,8 +892,8 @@ NoiseSFX_Unk07_RocketLand_Continue:
 
 NoiseSFX_Crit_SetUp:
     lda #$20
-    ldy #<B28_0108
-    jmp B28_02dc
+    ldy #<noi_instrument_bomb
+    jmp SFX_SetupContinue
 
 NoiseSFX_Crit_Continue:
     jsr B28_00d3
@@ -863,8 +913,8 @@ NoiseSFX_Bomb_SetUp:
     .else
     lda #$40
     .endif
-    ldy #<B28_0108
-    jmp B28_02dc
+    ldy #<noi_instrument_bomb
+    jmp SFX_SetupContinue
 
 NoiseSFX_Bomb_Continue:
     jsr B28_00d3
@@ -920,8 +970,8 @@ SFX_ReadNybbleFromC1Table:
 
 NoiseSFX_Rocket_SetUp:
     lda #$08
-    ldy #<B28_0104
-    jmp B28_02dc
+    ldy #<noi_instrument_rockettakeoff
+    jmp SFX_SetupContinue
 
 NoiseSFX_Rocket_Continue:
     jsr B28_00d3
@@ -961,7 +1011,7 @@ B28_04b0:
 B28_04b9:
     jmp EndNoiseSFX
 
-B28_04bc:
+DoDoublePulseSFX:
     sta unk_7d9
     jsr SetSQ2Registers
     lda unk_bf
@@ -972,32 +1022,33 @@ B28_04bc:
     inx
     stx unk_7c8+1
 
-    lda #$00
+    lda #0
     sta unk_7de
     sta soundactive_pulseg0
-    ldx #$01
-    jmp B28_0314
-    B28_04dd:
+    ldx #1
+    jmp StoreCHANNELVariables
+
+B28_04dd:
     jsr EndPulseGroup0SFX
     jsr B28_0840
     inc unk_78a
-    lda #$00
+    lda #0
     sta soundactive_pulseg1
-    ldx #$01
+    ldx #1
     lda #$7f
-    B28_04ef:
+B28_04ef:
     sta SQ1, x
     sta SQ2, x
     rts
 
 PulseG1SFX_DimensionSlip_SetUp:
-    ldy #<B28_0124
+    ldy #<sq1_instrument_teleporting
     jsr SetSQ1Registers
     lda #$0a
-    ldy #<B28_0120
-    jsr B28_04bc
-    lda B28_0120
-    sta unk_7e0
+    ldy #<sq2_instrument_teleporting
+    jsr DoDoublePulseSFX
+    lda sq2_instrument_teleporting
+    sta sfx_framecounter
     B28_0508:
     rts
 
@@ -1006,12 +1057,12 @@ PulseG1SFX_DimensionSlip_Continue:
     bne B28_0533
     lda unk_7e4
     beq B28_0518
-    dec unk_7e0
+    dec sfx_framecounter
     bne B28_051b
     B28_0518:
-    inc unk_7e0
+    inc sfx_framecounter
     B28_051b:
-    lda unk_7e0
+    lda sfx_framecounter
     cmp #$b0
     bne B28_0525
     jmp B28_04dd
@@ -1046,15 +1097,15 @@ PulseG1SFX_Status_SetUp:
     lda #$03
     ldy #<B28_0128
     B28_0556:
-    jmp B28_04bc
+    jmp DoDoublePulseSFX
 
 PulseG1SFX_Status_GiegueAttack_Continue:
     jsr B28_057e
     jsr B28_00d3
     bne B28_057e
     ldx #$00
-    inc unk_7e0
-    lda unk_7e0
+    inc sfx_framecounter
+    lda sfx_framecounter
     cmp #$12
     beq B28_0576
     cmp #$0e
@@ -1091,8 +1142,8 @@ incbinRange "../../split/us/music.bin", $59c, $5a4
 
 PulseGroup0SFX_Miss_SetUp:
     lda #$0A
-    ldy #<B28_0198
-    jmp B28_02dc
+    ldy #<sq1_instrument_blindmiss
+    jmp SFX_SetupContinue
 
 .ifndef VER_JP
 Purchase_Volumes:
@@ -1102,53 +1153,53 @@ Purchase_Volumes:
 PulseGroup0SFX_Purchase_Continue:
     lda unk_7e4
     beq B28_05c1
-    inc unk_7e0
-    lda unk_7e0
+    inc sfx_framecounter
+    lda sfx_framecounter
     cmp #$16
     bne B28_059b
     jmp EndPulseGroup0SFX
 
 B28_05c1:
-    lda unk_7e0
+    lda sfx_framecounter
     and #$03
     tay
     lda Purchase_Volumes, y
     sta SQ1_VOL
-    inc unk_7e0
-    lda unk_7e0
+    inc sfx_framecounter
+    lda sfx_framecounter
     cmp #$08
     bne B28_059b
     inc unk_7e4
-    ldy #<B28_017c
+    ldy #<sq1_instrument_buy_cont
     jmp SetSQ1Registers
 
 
 PulseGroup0SFX_Unk0D_SetUp:
     lda #$02
-    ldy #<B28_0190
-    jmp B28_02dc
+    ldy #<sq1_instrument_unused0D
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_Purchase_SetUp:
-    ldy #<B28_0178
-    jmp B28_02dc
+    ldy #<sq1_instrument_buy
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_PlayerAttack_SetUp:
     lda #$04
-    ldy #<B28_0164
-    jmp B28_02dc
+    ldy #<sq1_instrument_playerattack
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_PlayerAttack_Continue:
     jsr B28_00d3
     bne B28_066d
-    inc unk_7e0
-    lda unk_7e0
+    inc sfx_framecounter
+    lda sfx_framecounter
     cmp #$01
     beq @B28_0608
     cmp #$04
     bne B28_066d
     jmp EndPulseGroup0SFX
 @B28_0608:
-    ldy #<B28_0168
+    ldy #<sq1_instrument_playerattack_cont
     jmp SetSQ1Registers
 
 PulseGroup0SFX_Laura_SetUp:
@@ -1156,9 +1207,9 @@ PulseGroup0SFX_Laura_SetUp:
     ; fallthrough
 PulseGroup0SFX_Canary_SetUp:
     lda #$0f
-    ldy #<B28_0144
-    jsr B28_02dc
-    lda B28_0144+2
+    ldy #<sq1_instrument_canarychirp
+    jsr SFX_SetupContinue
+    lda sq1_instrument_canarychirp+2
     B28_061a:
     sta unk_7e8
     rts
@@ -1179,8 +1230,8 @@ PulseGroup0SFX_Canary_Laura_Continue:
     ldy #<B28_0148
     bne B28_0641
     B28_063c:
-    lda B28_0144+2
-    ldy #<B28_0144
+    lda sq1_instrument_canarychirp+2
+    ldy #<sq1_instrument_canarychirp
     B28_0641:
     pha
     jsr SetSQ1Registers
@@ -1213,13 +1264,13 @@ PulseGroup0SFX_Unk0E_SetUp:
     cmp #PulseG0_Recovery
     beq B28_066d
     lda #$02
-    ldy #<B28_0194
-    jmp B28_02dc
+    ldy #<sq1_instrument_textprinting
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_TakeDamage_SetUp:
     lda #$10
-    ldy #<B28_018c
-    jmp B28_02dc
+    ldy #<sq1_instrument_takedmg
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_TakeDamage_Unk0D_Unk0E_Miss_Continue:
     jsr B28_00d3
@@ -1238,14 +1289,14 @@ EndPulseGroup0SFX:
 
 PulseGroup0SFX_Dodge_SetUp:
     lda #$06
-    ldy #<B28_0180
-    jmp B28_02dc
+    ldy #<sq1_instrument_dodge
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_Dodge_Continue:
     jsr B28_00d3
     bne B28_0698
-    inc unk_7e0
-    lda unk_7e0
+    inc sfx_framecounter
+    lda sfx_framecounter
     cmp #$01
     beq B28_06ba
     cmp #$02
@@ -1257,7 +1308,7 @@ PulseGroup0SFX_Dodge_Continue:
     ldy #<B28_0184
     jmp SetSQ1Registers
     B28_06bf:
-    ldy #<B28_0188
+    ldy #<sq1_instrument_dodge_cont
     jmp SetSQ1Registers
 
 
@@ -1268,8 +1319,8 @@ incbinRange "../../split/jp/music.bin", $69e, $6A4
 
 PulseGroup0SFX_EnemyAttack_SetUp:
     lda #$08
-    ldy #<B28_016c
-    jmp B28_02dc
+    ldy #<sq1_instrument_enemyattack
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_EnemyAttack_Continue:
     jsr B28_00d3
@@ -1290,7 +1341,7 @@ B28_06e9:
 B28_06ed:
     lda #$00
     sta unk_7e4
-    lda unk_7e0
+    lda sfx_framecounter
     beq B28_0702
     cmp #$01
     beq B28_0706
@@ -1304,20 +1355,20 @@ B28_06ed:
     ldy #<B28_0174
     B28_0708:
     jsr SetSQ1Registers
-    inc unk_7e0
+    inc sfx_framecounter
     B28_070e:
     rts
 
 PulseGroup0SFX_MenuBloop_Continue:
     jsr B28_00d3
     bne B28_070e
-    inc unk_7e0
-    lda unk_7e0
+    inc sfx_framecounter
+    lda sfx_framecounter
     cmp #$02
     bne B28_0721
     jmp EndPulseGroup0SFX
     B28_0721:
-    ldy #<B28_0150
+    ldy #<sq1_instrument_menubloop_echo
     jmp SetSQ1Registers
 
 PulseGroup0SFX_MenuBloop_SetUp:
@@ -1327,55 +1378,56 @@ PulseGroup0SFX_MenuBloop_SetUp:
     beq B28_070e
     .endif
     lda #$03
-    ldy #<B28_014c
-    bne B28_075b
+    ldy #<sq1_instrument_menubloop
+    bne SFX_SetupContinue_Local
 
 PulseGroup0SFX_MagicantWarp_SetUp:
     lda #$10
-    ldy #<B28_013c
-    jsr B28_075b
+    ldy #<sq1_instrument_magicant
+    jsr SFX_SetupContinue_Local
     lda #$18
     bne B28_077b
 
 PulseGroup0SFX_MagicantWarp_Continue:
     jsr B28_00d3
     bne B28_077e
-    ldy #<B28_013c
-    bne B28_0786
+    ldy #<sq1_instrument_magicant
+    bne SQ1SFX_PKBeamValues
 
 PulseGroup0SFX_StatBoost_SetUp:
     lda #$06
-    ldy #<B28_0158
-    jsr B28_075b
+    ldy #<sq1_instrument_statboost
+    jsr SFX_SetupContinue_Local
     lda #$10
     bne B28_077b
 
 PulseGroup0SFX_StatBoost_Continue:
     jsr B28_00d3
     bne B28_077e
-    ldy #<B28_0158
-    bne B28_0786
+    ldy #<sq1_instrument_statboost
+    bne SQ1SFX_PKBeamValues
 
-B28_075b:
-    jmp B28_02dc
+; local jmp to sfx setup continue
+SFX_SetupContinue_Local:
+    jmp SFX_SetupContinue
 
 PulseGroup0SFX_Recovery_SetUp:
     lda #$05
-    ldy #<B28_015c
-    jsr B28_075b
+    ldy #<sq1_instrument_recovery
+    jsr SFX_SetupContinue_Local
     lda #$08
     bne B28_077b
 
 PulseGroup0SFX_Recovery_Continue:
     jsr B28_00d3
     bne B28_077e
-    ldy #<B28_015c
-    bne B28_0786
+    ldy #<sq1_instrument_recovery
+    bne SQ1SFX_PKBeamValues
 
 PulseGroup0SFX_Beam_SetUp:
     lda #$06
-    ldy #<B28_0160
-    jsr B28_075b
+    ldy #<sq1_instrument_beam
+    jsr SFX_SetupContinue_Local
     lda #$00
     B28_077b:
     sta unk_7e4
@@ -1385,31 +1437,31 @@ PulseGroup0SFX_Beam_SetUp:
 PulseGroup0SFX_Beam_Continue:
     jsr B28_00d3
     bne B28_077e
-    ldy #<B28_0160
-    B28_0786:
+    ldy #<sq1_instrument_beam
+SQ1SFX_PKBeamValues:
     jsr SetSQ1Registers
     clc
     lda unk_7e4
-    adc unk_7e0
+    adc sfx_framecounter
     tay
     lda PKBeam_Periods, y
     sta SQ1_LO
-    ldy unk_7e0
+    ldy sfx_framecounter
     lda PKBeam_Volumes, y
     sta SQ1_VOL
     bne B28_07a5
     jmp EndPulseGroup0SFX
 B28_07a5:
-    inc unk_7e0
+    inc sfx_framecounter
     B28_07a8:
     rts
 
 PulseGroup0SFX_ItemDropGet_SetUp:
     lda #$04
-    ldy #<B28_0154
-    jsr B28_02dc
-    lda B28_0154+2
-    sta unk_7e0
+    ldy #<sq1_instrument_itemget
+    jsr SFX_SetupContinue
+    lda sq1_instrument_itemget+2
+    sta sfx_framecounter
     rts
 
 PulseGroup0SFX_ItemDropGet_Continue:
@@ -1421,33 +1473,33 @@ PulseGroup0SFX_ItemDropGet_Continue:
     bne @B28_07c9
     jmp EndPulseGroup0SFX
     @B28_07c9:
-    lda unk_7e0
+    lda sfx_framecounter
     lsr a
     lsr a
     lsr a
     sta unk_7e8
-    lda unk_7e0
+    lda sfx_framecounter
     clc
     sbc unk_7e8
-    sta unk_7e0
+    sta sfx_framecounter
     sta SQ1_LO
     lda #$28
     B28_07e1:
     sta SQ1_HI
     B28_07e4:
     rts
-
+; "magic" oscilating pulse channel effect used for Beam, Hook, Recovery sfx, etc.
 PKBeam_Volumes:
 .byte $9E,$9B,$99,$96,$94,$93,$92,$91,$00
-PKBeam_Periods:
+PKBeam_Periods: ; frequencies
 .byte $20,$40,$20,$40,$20,$40,$20,$40,$90,$60,$90,$90,$60,$80,$90,$60
 .byte $B0,$79,$A8,$58,$90,$40,$80,$30,$76,$9F,$58,$76,$42,$58,$31,$42
 
 PulseGroup0SFX_LearnedPSI_Continue:
     jsr B28_00d3
     bne B28_07e4
-    ldy unk_7e0
-    inc unk_7e0
+    ldy sfx_framecounter
+    inc sfx_framecounter
     lda LearnedPSI_Periods, y
     beq B28_0826
     sta SQ1_LO
@@ -1458,8 +1510,8 @@ PulseGroup0SFX_LearnedPSI_Continue:
 
 PulseGroup0SFX_LearnedPSI_SetUp:
     lda #$04
-    ldy #<B28_0140
-    jmp B28_02dc
+    ldy #<sq1_instrument_learnedpsi
+    jmp SFX_SetupContinue
 
 LearnedPSI_Periods:
 .byte     $A8,$96,$70,$53,$4A,$37,$29
@@ -1469,7 +1521,7 @@ LearnedPSI_Periods:
 B28_0840:
     lda #$10
     sta SQ2_VOL
-    lda #$00
+    lda #0
     sta unk_7c8+1
     sta soundactive_unknown
     rts
@@ -1477,7 +1529,7 @@ B28_0840:
 TriangleSFX_Unk02_SetUp:
     lda #$04
     ldy #<B28_01a0
-    jsr B28_02dc
+    jsr SFX_SetupContinue
 
     lda unk_bb
     sta TRI_LO
@@ -1488,7 +1540,7 @@ TriangleSFX_Unk02_SetUp:
 TriangleSFX_Freeze_SetUp:
     lda #$04
     ldy #<B28_019c
-    jsr B28_02dc
+    jsr SFX_SetupContinue
     lda #$08
     sta unk_7e6
     rts
@@ -1503,7 +1555,7 @@ TriangleSFX_Freeze_Continue:
     bne B28_08b3
     @loop:
     ldy unk_7e2
-    lda Freeze_Periods,Y
+    lda Freeze_Periods, y
     beq @inc_period_high_byte
     cmp #$FF
     beq EndTriangleSFX
@@ -1547,7 +1599,7 @@ TriangleSFX_PlayerKilled_Continue:
 TriangleSFX_PlayerKilled_SetUp:
     lda #$03
     ldy #<B28_01a4
-    jmp B28_02dc
+    jmp SFX_SetupContinue
 
 PlayerKilled_Periods:
     .byte $3f,$48,$52,$6d,$78,$84,$91,$ae,$bd,$00
@@ -1555,7 +1607,7 @@ PlayerKilled_Periods:
 TriangleSFX_Equip_SetUp:
     lda #$08
     ldy #<B28_01a8
-    jmp B28_02dc
+    jmp SFX_SetupContinue
 
 TriangleSFX_Equip_Continue:
     jsr B28_00d3
@@ -1604,12 +1656,14 @@ HandleMusic:
     sta music_id
     jmp B28_094e
     B28_0936:
-    cmp #$06
+    ;if playing pollyanna, check if need to play bein friends instead
+    cmp #6
     bne B28_0946
+    ;if party count != 1, play bein friends
     lda pc_count
-    cmp #$01
+    cmp #1
     beq B28_0945
-    lda #$06
+    lda #6
     bne B28_0946
     B28_0945:
     tya
@@ -1632,8 +1686,8 @@ HandleMusic:
 .ifndef VER_JP
 PulseGroup0SFX_XXStone_SetUp:
     lda #$03
-    ldy #<B28_0138
-    jsr B28_02dc
+    ldy #<sq1_instrument_xxstone
+    jsr SFX_SetupContinue
     jmp PulseGroup0SFX_XXStone_Common
 
 PulseGroup0SFX_XXStone_Continue:
@@ -1641,21 +1695,21 @@ PulseGroup0SFX_XXStone_Continue:
     bne B28_0995
     ; fallthrough
 PulseGroup0SFX_XXStone_Common:
-    lda unk_7e0
+    lda sfx_framecounter
     and #$07
     tay
-    lda unk_7e0
+    lda sfx_framecounter
     lsr a
     lsr a
     lsr a
     tax
-    inc unk_7e0
+    inc sfx_framecounter
     lda XXStone_Volumes, x
     beq B28_0996
     sta SQ1_VOL
     lda XXStone_PeriodLowBytes, y
     sta SQ1_LO
-    lda B28_0138+3
+    lda sq1_instrument_xxstone+3
     sta SQ1_HI
     B28_0995:
     rts
@@ -1670,7 +1724,28 @@ incbinRange "../../split/us/music.bin", $9a1, $9a7
 
 .endif
 
-B28_09a7:
+
+; $400C	--lc.vvvv	Length counter halt, constant volume/envelope flag, and volume/envelope divider period (write)
+
+; $400E	M---.PPPP	Mode and period (write)
+; bit 7	M--- ----	Mode flag
+; bits 3-0	---- PPPP	The timer period is set to entry P of the following:
+; Rate  $0 $1  $2  $3  $4  $5   $6   $7   $8   $9   $A   $B   $C    $D    $E    $F
+;       --------------------------------------------------------------------------
+; NTSC   4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068 (2046 in old)
+; PAL    4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708,  944, 1890, 3778
+; The period determines how many CPU cycles happen between shift register clocks.
+; These periods are all even numbers because there are 2 CPU cycles in an APU cycle.
+
+; $400F	llll.l---	Length counter load and envelope restart (write)
+
+.macro noise_preset lch, cvflag, dividerPeriod, mode, period, lengthCounter
+    .byte (lch << 5) | (cvflag) << 4 | dividerPeriod
+    .byte (mode << 7) | period
+    .byte lengthCounter << 3
+.endmacro
+
+Noise_Instruments:
 .byte $00 ; 1
 .byte $10,$01,$18 ; 2
 .byte $00,$01,$38 ; 4
@@ -1687,17 +1762,17 @@ B28_09a7:
 
 B28_09cc:
     lda soundactive_track
-    cmp #$01
+    cmp #1
     beq B28_09f5
     txa
-    cmp #$03
+    cmp #3
     beq B28_09f5
     lda ME_Envelopes0, x
     and #$e0
     beq B28_09f5
     sta unk_b0
     lda unk_7c3, x
-    cmp #$02
+    cmp #2
     beq B28_09f2
     ldy unk_be
     lda currptr_pulse0, y
@@ -1773,7 +1848,7 @@ B28_0a33:
     lda unk_b2
     cmp #$0a
     bne B28_0a5a
-    lda #$00
+    lda #0
     B28_0a5a:
     tay
     lda Pitch_Envelope_1_7, y
@@ -1822,7 +1897,7 @@ Pitch_Envelope_2:
 B28_0acc:
     lda music_id
     tay
-    lda B28_10f4, y
+    lda Music_Table_2_Ids, y
     tay
 
     ldx #0
@@ -1863,31 +1938,31 @@ B28_0aec:
     jmp B28_0b31
     .ifndef VER_JP
     B28_0b06:
-    ldx #$00
-    ldy #$00
+    ldx #0
+    ldy #0
     B28_0b0a:
-    lda B28_12f8, y
+    lda Path_To_Giegue_BGM_header, y
     sta ME_Transpose, x
     iny
     inx
     txa
-    cmp #$0a
+    cmp #10
     bne B28_0b0a
     jmp B28_0b31
     .endif
     B28_0b1a:
     lda music_id
     tay
-    lda B28_10DC, y
+    lda Music_Table_Ids, y
     tay
-    ldx #$00
+    ldx #0
     B28_0b24:
     lda Music_Table, y
     sta ME_Transpose, x
     iny
     inx
     txa
-    cmp #$0a
+    cmp #10
     bne B28_0b24
     B28_0b31:
     lda #1
@@ -1895,9 +1970,9 @@ B28_0aec:
     sta MusicChannel_NoteLengthCounter+1
     sta MusicChannel_NoteLengthCounter+2
     sta MusicChannel_NoteLengthCounter+3
-    lda #$00
+    lda #0
     sta unk_ba
-    ldy #$08
+    ldy #8
     B28_0b45:
     sta ME_CurrentNoisePhrase+1, y
     dey
@@ -1928,14 +2003,14 @@ B28_0aec:
     inx
     inx
     txa
-    cmp #$08
+    cmp #8
     bne B28_0b4c
     rts
 
 B28_0b70:
     lda unk_78a
     beq B28_0ba0
-    cmp #$01
+    cmp #1
     beq B28_0b8a
     lda #$7f
     sta SQ2_SWEEP
@@ -1954,23 +2029,23 @@ B28_0b70:
     lda currptr_pulse0+1
     sta SQ1_HI
 
-    lda #$00
+    lda #0
     sta unk_78a
     B28_0ba0:
     rts
 
 B28_0ba1:
     txa
-    cmp #$02
+    cmp #2
     bcs B28_0ba0
     lda ME_Envelopes0, x
     and #$1f
     beq B28_0c06
     sta unk_b1
     lda unk_7c3, x
-    cmp #$02
+    cmp #2
     beq B28_0c10
-    ldy #$00
+    ldy #0
     B28_0bb8:
     dec unk_b1
     beq B28_0bc0
@@ -2116,9 +2191,9 @@ B28_0c69:
     txa
     lsr a
     tax
-    lda #$00
+    lda #0
     sta MusicChannel_Counter, x
-    lda #$01
+    lda #1
     sta MusicChannel_NoteLengthCounter, x
     bne B28_0c95
     B28_0c78:
@@ -2127,7 +2202,7 @@ B28_0c69:
 B28_0c7b:
     jsr B28_0b70
 
-    lda #$00
+    lda #0
     tax
     sta unk_be
     beq B28_0c95
@@ -2138,12 +2213,12 @@ B28_0c7b:
     B28_0c88:
     inx
     txa
-    cmp #$04
+    cmp #4
     beq B28_0c39
     lda unk_be
 
     clc
-    adc #$04
+    adc #4
     sta unk_be
     B28_0c95:
     txa
@@ -2162,10 +2237,11 @@ B28_0c7b:
     tax
     dec MusicChannel_NoteLengthCounter, x
     bne B28_0cfa
-    lda #$00
+    lda #0
     sta unk_7cd, x
     sta unk_7d1, x
     B28_0cb9:
+    ;interpret music commands
     jsr ReadByte
     beq B28_0c78
     cmp #$9f
@@ -2259,7 +2335,7 @@ B28_0d3a:
     sta MusicChannel_NewNoteLength, x
     tay
     txa
-    cmp #$02
+    cmp #2
     beq B28_0d06
     B28_0d4e:
     jsr ReadByte
@@ -2269,7 +2345,7 @@ B28_0d3a:
     tya
     sta unk_7c3, x
     txa
-    cmp #$03
+    cmp #3
     beq B28_0d03
     pha
     ldx unk_be
@@ -2303,10 +2379,10 @@ B28_0d73:
     tax
     tya
     bne B28_0d9c
-    lda #$00
+    lda #0
     sta unk_b0
     txa
-    cmp #$02
+    cmp #2
     beq B28_0da1
     lda #$10
     sta unk_b0
@@ -2322,7 +2398,7 @@ B28_0d73:
     inc unk_7c8, x
     ldy unk_be
     txa
-    cmp #$02
+    cmp #2
     beq B28_0dc7
     lda ME_Envelopes0, x
     and #$1f
@@ -2331,7 +2407,7 @@ B28_0d73:
     cmp #$10
     beq B28_0dc9
     and #$f0
-    ora #$00
+    ora #0
     bne B28_0dc9
     B28_0dc7:
     lda unk_b0
@@ -2395,14 +2471,14 @@ B28_0e17:
 
 B28_0e26:
     lda soundactive_noise
-    bne B28_0e3d
-    lda B28_09a7, y
+    bne @exit
+    lda Noise_Instruments, y
     sta NOISE_VOL
-    lda B28_09a7+1, y
+    lda Noise_Instruments+1, y
     sta NOISE_LO
-    lda B28_09a7+2, y
+    lda Noise_Instruments+2, y
     sta NOISE_HI
-    B28_0e3d:
+    @exit:
     rts
 
 B28_0e3e:
@@ -2413,10 +2489,6 @@ B28_0e3e:
     cmp #%10000000 ;is snare
     beq B28_0e54
     rts
-
-;register stuff
-.define dmc_sampleaddr(label) (label - $C000) / 64
-.define dmc_samplelen(labels, labele) ((labele - labels) -1 ) / 16
 
 B28_0e4a:
     ;kick drum
@@ -2435,7 +2507,7 @@ B28_0e4a:
     sta DMC_LEN
     sty DMC_START
     lda disable_dmc
-    bne B28_0e7b
+    bne @exit
     lda unk_b1
     sta DMC_FREQ
     lda #$0f
@@ -2444,7 +2516,7 @@ B28_0e4a:
     sta DMC_RAW
     lda #$1f
     sta SND_CHN
-    B28_0e7b:
+    @exit:
     rts
 
 ReadByte:
@@ -2532,443 +2604,495 @@ B28_0fea:
     .byte $00,$76,$00,$70,$00,$69,$00,$63,$00,$5E,$00,$58,$00,$53,$00,$4F
     .byte $00,$4A,$00,$46,$00,$42,$00,$3E,$00,$3A,$00,$37,$00,$34,$00,$31
     .byte $00,$2E,$00,$2B,$00,$29,$00,$0A,$00,$01
-Tempo_Lengths:
-    ;tempo note length offsets
-    NLT0:
-    .byte $04,$08,$10,$20,$40,$18,$30,$0c,$0a,$05,$02,$01
-    NLTC:
-    .byte $05,$0a,$14,$28,$50,$1e,$3c,$0f,$0c,$06,$03,$02
-    NLT18:
-    .byte $06,$0c,$18,$30,$60,$24,$48,$12,$10,$08,$03,$01
-    .byte $04,$02,$00,$90
-    NLT28:
-    .byte $07,$0e,$1c,$38,$70,$2a,$54,$15,$12,$09,$03,$01
-    .byte $62,$23
-    NLT35:
-    .byte $08,$10,$20,$40,$80,$30,$60,$18,$15,$0a,$04,$01
-    .byte $70,$28,$D0,$50
-    NLT43:
-    .byte $09,$12,$24,$48,$90,$36,$6c,$1b,$18
-    NLT4C:
-    .byte $0a,$14,$28,$50,$a0,$3c,$78,$1e,$1a,$0d,$05,$01
-    .byte $02,$17
-    NLT5A:
-    .byte $0b,$16,$2c,$58,$b0,$42,$84,$21,$1d,$0e,$05,$01
-    .byte $02,$17
 
-B28_10DC:
-    .byte $00,$0a,$14,$1e,$28,$3c,$32,$46,$50,$5a,$64,$6e,$78,$82,$8c,$96
-    .byte $a0,$aa,$b4,$be,$c8,$d2,$dc,$e6
-B28_10f4:
-    .byte $00,$0a,$14,$1e,$28,$32,$3c,$46,$50,$5a,$64,$6e,$78,$82,$8c,$96
-    .byte $A0,$AA,$B4,$BE,$C8,$D2,$DC,$E6,$F0
+;tempo note length offsets
+Tempo_Lengths:
+    NLT_00:
+    .byte $04,$08,$10,$20,$40,$18,$30,$0c
+    .byte $0a,$05,$02,$01
+    NLT_0C:
+    .byte $05,$0a,$14,$28,$50,$1e,$3c,$0f
+    .byte $0c,$06,$03,$02
+    NLT_18:
+    .byte $06,$0c,$18,$30,$60,$24,$48,$12
+    .byte $10,$08,$03,$01,$04,$02,$00,$90
+    NLT_28:
+    .byte $07,$0e,$1c,$38,$70,$2a,$54,$15
+    .byte $12,$09,$03,$01,$62,$23
+    NLT_35:
+    .byte $08,$10,$20,$40,$80,$30,$60,$18
+    .byte $15,$0a,$04,$01,$70,$28,$D0,$50
+    NLT_43:
+    .byte $09,$12,$24,$48,$90,$36,$6c,$1b
+    .byte $18
+    NLT_4C:
+    .byte $0a,$14,$28,$50,$a0,$3c,$78,$1e
+    .byte $1a,$0d,$05,$01,$02,$17
+    NLT_5A:
+    .byte $0b,$16,$2c,$58,$b0,$42,$84,$21
+    .byte $1d,$0e,$05,$01,$02,$17
+
+
+.define header_offset(ta) .byte ta-Music_Table
+Music_Table_Ids:
+    header_offset Ocarina_header
+    header_offset Flippant_Battle_header
+    header_offset Dangerous_Battle_header
+    header_offset Hippie_Battle_header
+    header_offset Win_Battle_header
+    header_offset Pollyanna_header
+    header_offset Bein_Friends_header
+    header_offset Yucca_Desert_header
+    header_offset Magicant_BGM_header
+    header_offset Snowman_BGM_header
+    header_offset Mt_Itoi_BGM_header
+    header_offset Factory_BGM_header
+    header_offset Ghastly_Site_header
+    header_offset Twinkle_Elementary_BGM_header
+    header_offset Humoresque_Of_A_Little_Dog_header
+    header_offset Poltergeist_header
+    header_offset Underground_BGM_header
+    header_offset Home_BGM_header
+    header_offset Approaching_Mt_Itoi_header
+    header_offset Paradise_Line_BGM_header
+    header_offset Fallin_Love_header
+    header_offset Mother_Earth_header
+    header_offset Tank_BGM_header
+    header_offset Monkey_Cave_BGM_header
+.define header_offset2(ta) .byte ta-Music_Table_2
+Music_Table_2_Ids:
+    header_offset2 Queen_Marys_Song_header
+    header_offset2 Wisdom_Of_The_World_header
+    header_offset2 Tombstone_BGM_header
+    header_offset2 Game_Over_BGM_header
+    header_offset2 Big_Victory_BGM_header
+    header_offset2 Airplane_BGM_header
+    header_offset2 Level_Up_BGM_header
+    header_offset2 Recovery_BGM_header
+    header_offset2 Fanfare_BGM_header
+    header_offset2 Live_House_BGM_header
+    header_offset2 All_That_I_Needed_Was_You_header
+
+    header_offset2 Melody_1_header
+    header_offset2 Melody_2_header
+    header_offset2 Melody_3_header
+    header_offset2 Melody_4_header
+    header_offset2 Melody_5_header
+    header_offset2 Melody_6_header
+    header_offset2 Melody_7_header
+    header_offset2 Melody_8_header
+
+    header_offset2 VS_Giegue_BGM_header
+    header_offset2 Ending_JP_BGM_header
+    header_offset2 Zoo_BGM_header
+    header_offset2 Phone_BGM_header
+    header_offset2 Youngtown_BGM_header
+    header_offset2 Cave_Of_The_Tail_BGM_header
+
     .ifndef VER_JP
     .byte 0
     .endif
 
-; ocarina melodies
 Music_Table:
+
+Ocarina_header:
 .byte $18
-.byte NLT18-Tempo_Lengths
+.byte NLT_18-Tempo_Lengths
 .addr -1
 .addr -1
-.addr unk_76c
+.addr ntbl_xc
 .addr -1
 
-; flippant battle song header
+Flippant_Battle_header:
 .byte $00
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr mus_b_flippant_pulse1
 .addr mus_b_flippant_pulse2
 .addr mus_b_flippant_triangle
 .addr mus_b_flippant_noise
 
-; dangerous battle song header
+Dangerous_Battle_header:
 .byte $00
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr mus_b_dangerous_pulse1
 .addr mus_b_dangerous_pulse2
 .addr mus_b_dangerous_triangle
 .addr mus_b_dangerous_noise
 
-; hippie battle song header
+Hippie_Battle_header:
 .byte $00
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr mus_b_hippie_pulse1
 .addr mus_b_hippie_pulse2
 .addr mus_b_hippie_triangle
 .addr mus_b_hippie_noise
 
-; win battle song header
+Win_Battle_header:
 .byte $00
-.byte NLT0-Tempo_Lengths
+.byte NLT_00-Tempo_Lengths
 .addr mus_b_win_pulse1
 .addr mus_b_win_pulse2
 .addr mus_b_win_triangle
 .addr -1
 
-; bein friends song header
+Bein_Friends_header:
 .byte $00
-.byte NLT35-Tempo_Lengths
+.byte NLT_35-Tempo_Lengths
 .addr mus_bein_friends_pulse1
 .addr mus_bein_friends_pulse2
 .addr mus_bein_friends_triangle
 .addr mus_bein_friends_noise
 
-; pollyanna song header
+Pollyanna_header:
 .byte $00
-.byte NLT5A-Tempo_Lengths
+.byte NLT_5A-Tempo_Lengths
 .addr mus_pollyanna_pulse1
 .addr mus_pollyanna_pulse2
 .addr mus_pollyanna_triangle
 .addr mus_pollyanna_noise
 
-; yucca desert song header
+Yucca_Desert_header:
 .byte $81
-.byte NLT18-Tempo_Lengths
+.byte NLT_18-Tempo_Lengths
 .addr mus_yucca_desert_pulse1
 .addr mus_yucca_desert_pulse2
 .addr mus_yucca_desert_triangle
 .addr mus_yucca_desert_noise
 
-; magicant song header
+Magicant_BGM_header:
 .byte $00
-.byte $4C
+.byte NLT_4C-Tempo_Lengths
 .addr mus_magicant_pulse1
 .addr mus_magicant_pulse2
 .addr mus_magicant_triangle
 .addr mus_magicant_noise
 
-; snowman song header
+Snowman_BGM_header:
 .byte $00
-.byte $35
+.byte NLT_35-Tempo_Lengths
 .addr mus_snowman_pulse1
 .addr mus_snowman_pulse2
 .addr mus_snowman_triangle
 .addr -1
 
-; mt itoi song header
+Mt_Itoi_BGM_header:
 .byte $00
-.byte $4C
+.byte NLT_4C-Tempo_Lengths
 .addr mus_mt_itoi_pulse1
 .addr mus_mt_itoi_pulse2
 .addr mus_mt_itoi_triangle
 .addr mus_mt_itoi_noise
 
-; factory song header
+Factory_BGM_header:
 .byte $00
-.byte $35
+.byte NLT_35-Tempo_Lengths
 .addr mus_factory_pulse1
 .addr mus_factory_pulse2
 .addr mus_factory_triangle
 .addr mus_factory_noise
 
-; ghastly site song header
+Ghastly_Site_header:
 .byte $00
-.byte $35
+.byte NLT_35-Tempo_Lengths
 .addr mus_ghastly_site_pulse1
 .addr mus_ghastly_site_pulse2
 .addr mus_ghastly_site_triangle
 .addr mus_ghastly_site_noise
 
-; twinkle elementary song header
+Twinkle_Elementary_BGM_header:
 .byte $00
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr mus_twinkle_elementary_pulse1
 .addr mus_twinkle_elementary_pulse2
 .addr mus_twinkle_elementary_triangle
 .addr mus_twinkle_elementary_noise
 
-; humoresque of a little dog song header
+Humoresque_Of_A_Little_Dog_header:
 .byte $00
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr mus_humoresque_of_a_little_dog_pulse1
 .addr mus_humoresque_of_a_little_dog_pulse2
 .addr mus_humoresque_of_a_little_dog_triangle
 .addr mus_humoresque_of_a_little_dog_noise
 
-; Poltergeist song header
+Poltergeist_header:
 .byte $87   ; Transpose
-.byte $18   ; Note length table offset
+.byte NLT_18-Tempo_Lengths   ; Note length table offset
 .addr mus_poltergeist_pulse1 ; Pulse1 phrase pointers
 .addr mus_poltergeist_pulse2 ; Pulse2 phrase pointers
 .addr mus_poltergeist_triangle ; Triangle phrase pointers
 .addr mus_poltergeist_noise ; Noise phrase pointers
 
-; underground song header
+Underground_BGM_header:
 .byte $00
-.byte $28
+.byte NLT_28-Tempo_Lengths
 .addr mus_underground_pulse1
 .addr mus_underground_pulse2
 .addr mus_underground_triangle
 .addr mus_underground_noise
 
-; home song header
+Home_BGM_header:
 .byte $02
-.byte $43
+.byte NLT_43-Tempo_Lengths
 .addr mus_home_pulse1
 .addr mus_home_pulse2
 .addr mus_home_triangle
 .addr mus_home_noise
 
-; approaching mt. itoi song header
+Approaching_Mt_Itoi_header:
 .byte $00
-.byte $35
+.byte NLT_35-Tempo_Lengths
 .addr mus_approaching_mt_itoi_pulse1
 .addr mus_approaching_mt_itoi_pulse2
 .addr mus_approaching_mt_itoi_triangle
 .addr mus_approaching_mt_itoi_noise
 
-; paradise line song header
+Paradise_Line_BGM_header:
 .byte $00
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr mus_paradise_line_pulse1
 .addr mus_paradise_line_pulse2
 .addr mus_paradise_line_triangle
 .addr mus_paradise_line_noise
 
-; fallin love song header
+Fallin_Love_header:
 .byte $00
-.byte $43
+.byte NLT_43-Tempo_Lengths
 .addr mus_fallin_love_pulse1
 .addr mus_fallin_love_pulse2
 .addr mus_fallin_love_triangle
 .addr mus_fallin_love_noise
 
-; Mother Earth song header
+Mother_Earth_header:
 .byte $00   ; Transpose
-.byte NLT28-Tempo_Lengths; Note length table offset
+.byte NLT_28-Tempo_Lengths   ; Note length table offset
 .addr mus_mother_earth_pulse1 ; Pulse1 phrase pointers
 .addr mus_mother_earth_pulse2 ; Pulse2 phrase pointers
 .addr mus_mother_earth_triangle ; Triangle phrase pointers
 .addr mus_mother_earth_noise ; Noise phrase pointers
 
-; tank song header
+Tank_BGM_header:
 .byte $00
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr mus_tank_pulse1
 .addr mus_tank_pulse2
 .addr mus_tank_triangle
 .addr mus_tank_noise
 
-; monkey cave song header
+Monkey_Cave_BGM_header:
 .byte $00
-.byte $0C
+.byte NLT_0C-Tempo_Lengths
 .addr mus_monkey_cave_pulse1
 .addr mus_monkey_cave_pulse2
 .addr mus_monkey_cave_triangle
 .addr -1
 
 Music_Table_2:
-; queen mary's song song header
+
+Queen_Marys_Song_header:
 .byte $00
-.byte $28
+.byte NLT_28-Tempo_Lengths
 .addr B29_0E84
 .addr B29_0E6C
 .addr -1
 .addr -1
 
-; wisdom of the world song header
+Wisdom_Of_The_World_header:
 .byte $00
-.byte $5A
+.byte NLT_5A-Tempo_Lengths
 .addr B29_0EFB
 .addr B29_0F01
 .addr B29_0F07
 .addr -1
 
-; tombstone song header
+Tombstone_BGM_header:
 .byte $18
-.byte $4C
+.byte NLT_4C-Tempo_Lengths
 .addr B29_0FFF
 .addr B29_0FF7
 .addr -1
 .addr -1
 
-; game over song header
+Game_Over_BGM_header:
 .byte $00
-.byte NLT4C-Tempo_Lengths
+.byte NLT_4C-Tempo_Lengths
 .addr B29_1012
 .addr B29_101A
 .addr B29_1022
 .addr -1
 
-; big victory song header
+Big_Victory_BGM_header:
 .byte $00
-.byte NLT18-Tempo_Lengths
+.byte NLT_18-Tempo_Lengths
 .addr mus_big_victory_pulse1
 .addr mus_big_victory_pulse2
 .addr mus_big_victory_triangle
 .addr -1
 
-; airplane song header
+Airplane_BGM_header:
 .byte $00
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr B29_1992
 .addr B29_1998
 .addr B29_199E
 .addr B29_19B0
 
-; level up song header
+Level_Up_BGM_header:
 .byte $06
-.byte NLT0-Tempo_Lengths
+.byte NLT_00-Tempo_Lengths
 .addr mus_level_up_pulse1_intro
 .addr mus_level_up_pulse2_intro
 .addr mus_level_up_triangle_intro
 .addr -1
 
-; recovery song header
+Recovery_BGM_header:
 .byte $83
-.byte NLT18-Tempo_Lengths
+.byte NLT_18-Tempo_Lengths
 .addr B29_0E98
 .addr B29_0E9C
 .addr B29_0E9E
 .addr -1
 
-; fanfare song header
+Fanfare_BGM_header:
 .byte $83
-.byte NLT43-Tempo_Lengths
+.byte NLT_43-Tempo_Lengths
 .addr B29_1438
 .addr B29_143C
 .addr B29_143E
 .addr -1
 
-; live house song header
+Live_House_BGM_header:
 .byte $87
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr B29_109E
 .addr B29_10A4
 .addr B29_10B0
 .addr B29_10BC
 
-; all that i needed was you song header
+All_That_I_Needed_Was_You_header:
 .byte $00
-.byte $18
+.byte NLT_18-Tempo_Lengths
 .addr B29_113C
 .addr B29_1152
 .addr B29_1162
 .addr B29_1174
 
-; melody 1 song header
+Melody_1_header:
 .byte $30
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_1302
 .addr B28_1306
 .addr -1
 .addr -1
 
-; melody 2 song header
+Melody_2_header:
 .byte $18
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_130A
 .addr B28_130E
 .addr -1
 .addr -1
 
-; melody 3 song header
+Melody_3_header:
 .byte $00
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_1312
 .addr B28_1316
 .addr -1
 .addr -1
 
-; melody 4 song header
+Melody_4_header:
 .byte $00
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_131A
 .addr B28_131E
 .addr -1
 .addr -1
 
-; melody 5 song header
+Melody_5_header:
 .byte $30
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_1322
 .addr B28_1326
 .addr -1
 .addr -1
 
-; melody 6 song header
+Melody_6_header:
 .byte $18
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_132A
 .addr B28_132E
 .addr -1
 .addr -1
 
-; melody 7 song header
+Melody_7_header:
 .byte $30
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_1332
 .addr B28_1336
 .addr -1
 .addr -1
 
-; melody 8 song header
+Melody_8_header:
 .byte $18
-.byte NLT28-Tempo_Lengths
+.byte NLT_28-Tempo_Lengths
 .addr B28_133A
 .addr B28_133E
 .addr -1
 .addr -1
 
-; vs giegue song header
+VS_Giegue_BGM_header:
 .byte $00
-.byte NLT43-Tempo_Lengths
+.byte NLT_43-Tempo_Lengths
 .addr B29_1461
 .addr B29_1467
 .addr -1
 .addr -1
 
-; ending (jp) song header
+Ending_JP_BGM_header:
 .byte $00
-.byte NLT35-Tempo_Lengths
+.byte NLT_35-Tempo_Lengths
 .addr mus_epiloguejp_pulse1_start
 .addr mus_epiloguejp_pulse2_start
 .addr mus_epiloguejp_triangle_start
 .addr mus_epiloguejp_noise_start
 
-; zoo song header
+Zoo_BGM_header:
 .byte $00
-.byte $28
+.byte NLT_28-Tempo_Lengths
 .addr B29_1479
 .addr B29_147F
 .addr B29_0827
 .addr B29_082F
 
-; phone song header
+Phone_BGM_header:
 .byte $00
-.byte NLT18-Tempo_Lengths
+.byte NLT_18-Tempo_Lengths
 .addr -1
 .addr B29_1495
 .addr -1
 .addr -1
 
-; youngtown song header
+Youngtown_BGM_header:
 .byte $00
-.byte $28
+.byte NLT_28-Tempo_Lengths
 .addr B29_14A3
 .addr B29_14A9
 .addr B29_14AF
 .addr -1
 
-
-.ifdef VER_JP
-; cave of the tail song header
-B28_12f8:
-.endif
+Cave_Of_The_Tail_BGM_header:
 .byte $00
-.byte $28
+.byte NLT_28-Tempo_Lengths
 .addr B29_1556
 .addr B29_155E
 .addr -1
 .addr -1
 
 .ifndef VER_JP
-; path to giegue song header
-B28_12f8:
+Path_To_Giegue_BGM_header:
 .byte $00
-.byte $43
+.byte NLT_43-Tempo_Lengths
 .addr B29_1580
 .addr B29_1588
 .addr B29_1590

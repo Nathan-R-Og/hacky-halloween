@@ -44,17 +44,18 @@ jobs:
     - name: Build US
       run: chmod +x build && ./build
 
-    - name: Output patches
-      run: ./make_patch && ./make_patch -i
+    #patches are manual until distroot comes back online
+    #- name: Output patches
+    #  run: ./make_patch && ./make_patch -i
 
-    - name: Upload NES 2.0 patch
-      uses: actions/upload-artifact@v4
-      with:
-        name: hacky_halloween_nes2.0.bps
-        path: hacky_halloween_nes2.0.bps
+    #- name: Upload NES 2.0 patch
+    #  uses: actions/upload-artifact@v4
+    #  with:
+    #    name: hacky_halloween_nes2.0.bps
+    #    path: hacky_halloween_nes2.0.bps
 
-    - name: Upload INES patch
-      uses: actions/upload-artifact@v4
-      with:
-        name: hacky_halloween_ines.bps
-        path: hacky_halloween_ines.bps
+    #- name: Upload INES patch
+    #  uses: actions/upload-artifact@v4
+    #  with:
+    #    name: hacky_halloween_ines.bps
+    #    path: hacky_halloween_ines.bps

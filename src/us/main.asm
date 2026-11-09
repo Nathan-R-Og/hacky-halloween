@@ -9,14 +9,14 @@
 
 .include "../global/header.asm"
 
-.include "prg/bank0.asm"
+.include "../global/prg/tiles.asm"
 .include "../global/map.asm"
 .include "../global/objects/1.asm"
-.include "prg/bank11.asm"
-.include "prg/bank12.asm"
+.include "../global/objects/2.asm"
+.include "../global/objects/3.asm"
 
-.include "prg/bank13.asm"
-.include "prg/bank14.asm"
+.include "../global/prg/overworld.asm"
+.include "../global/prg/title.asm"
 
 .include "../global/sprites.asm"
 .include "../global/battle_data.asm"
@@ -39,7 +39,7 @@
 .include "prg/credits_music.asm"
 
 .include "../global/prg/music.asm"
-.include "prg/constant.asm"
+.include "../global/prg/constant.asm"
 
 .include "../global/chr/bank0.asm"
 .include "../global/chr/bank1.asm"

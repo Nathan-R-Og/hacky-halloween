@@ -1,9 +1,5 @@
 ;honestly with how huge map data is i dont really think there's a better way of doing this
-.ifdef VER_JP
-.define mapfile "../../split/jp/map.bin"
-.else
 .define mapfile "../../edit/map.bin"
-.endif
 
 .segment        "PRG1": absolute
 incbinRange mapfile,0,$2000

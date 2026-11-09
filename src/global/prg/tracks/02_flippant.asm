@@ -42,7 +42,7 @@ mus_b_flippant_noise:
 
 mus_b_flippant_pulse1_phrase01:
     Set_Timbre 0, 19, timbre_c_square SQTD_12_5, 1, SQTV_ISVOL, 1
-    Set_NLT 0
+    Set_NLT NLT_00-Tempo_Lengths
 
 ; measures 1-4
     Note_Repeat 2
@@ -656,10 +656,10 @@ mus_b_flippant_noise_phrase01:
         Note_Noise 0, 7
         Note_Noise 0, 7
         Note_Length nl_thirtysecond ; two-frame allignment correction
-        Note_Noise 0, 1
+        Noise_Rest
         Note_Length nl_quarter
         Note_Noise 0, 7
-        Note_Noise 0, 1
+        Noise_Rest
     Note_End_Repeat
 
     Note_Repeat 2
@@ -677,8 +677,8 @@ mus_b_flippant_noise_phrase01:
 
     Note_Length nl_quarter
     Note_Noise 0, 7
-    Note_Noise 0, 1
+    Noise_Rest
     Note_Noise 0, 7
-    Note_Noise 0, 1
+    Noise_Rest
 
     Track_End

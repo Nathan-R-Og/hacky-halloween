@@ -113,7 +113,10 @@ MSG_B_UNK2:
 .byte   stopText
 
 MSG_B_UNK:
-.byte   unk,unk3,unk2,unk3
+.byte   set_pos 8, 6
+.byte   repeatTile " ", 16
+.byte   set_pos 8, 7
+.byte   repeatTile " ", 16
 .byte   stopText
 
 MSG_B_APPROACH:
@@ -415,7 +418,7 @@ MSG_B_CHECK_WEAKSPRAYS:
 .byte   "  Sprays."
 .byte   stopText
 
-MSG_B_CHECK_OFEENSE:
+MSG_B_CHECK_OFFENSE:
 .byte   "> OFFENSE ",damageAmount,"."
 .byte   stopText
 

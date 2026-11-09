@@ -1,0 +1,2625 @@
+.segment        "PRG14": absolute
+
+Map_TileProperties:
+    .incbin "../../edit/map_tile_properties.bin"
+;overworld palettes + map exclusive data
+;1st and 3rd byte of last palette of each set contains map data
+Map_Palettes:
+    .incbin "../../edit/map_palettes.bin"
+
+;format seems to be $10 per area, though why they sometimes pad with
+;the same groups is questionable
+;it SEEMS to use the duplicated parts??????? are they to 'increase'
+;spawn rates????? i dont know man.
+;addendum; area is the perfect term. it goes off of sector area param
+SPAWN_SETS: ;use this symbol when the handler gets disasmd
+SPAWNS_0:
+    .repeat $10
+        .byte 0
+    .endrepeat
+SPAWNS_1:
+    .repeat 4
+        .byte BATTLEID BATTLE_HATEFULCROWS
+        .byte BATTLEID BATTLE_HATEFULCROWS
+        .byte BATTLEID BATTLE_TOTKID
+        .byte BATTLEID BATTLE_SCAREDYCROW
+    .endrepeat
+SPAWNS_2:
+    .repeat 4
+        .byte BATTLEID BATTLE_ZAMBIES
+        .byte BATTLEID BATTLE_EGGER
+        .byte BATTLEID BATTLE_DEMON
+    .endrepeat
+    .byte 0, 0, 0, 0
+SPAWNS_3:
+    .repeat 4
+        .byte BATTLEID BATTLE_STINKYGHOST
+        .byte BATTLEID BATTLE_STINKYGHOST
+        .byte BATTLEID BATTLE_HEART
+        .byte BATTLEID BATTLE_WRAITHS
+    .endrepeat
+SPAWNS_4:
+    .repeat 4
+        .byte BATTLEID BATTLE_ALLINGNOURE
+        .byte BATTLEID BATTLE_SPIREAL
+        .byte BATTLEID BATTLE_CRUMBL
+    .endrepeat
+    .byte 0, 0, 0, 0
+
+intro:
+    ;use bank $13 as lower half
+    jsr BANKSET_H13
+
+    ;title routine
+    jsr Title_Screen
+    ;here, you have gone to the save menu
+
+    .ifndef VER_JP
+        exited_naming_sequence:
+    .endif
+    jsr ClearSprites ;clear sprites
+    jsr ClearTilemaps ;clear tilemap 0
+    jsr LoadNamingScreen2 ;self explanatory
+
+    jsr PpuSync
+
+    ;load NAMING_SCREEN_1
+    .ifdef VER_JP
+        .import __NAMING_SCREEN_1_RUN__
+        ldy #$7a
+        lda #.LOBYTE(__NAMING_SCREEN_1_RUN__)
+        ldx #.HIBYTE(__NAMING_SCREEN_1_RUN__)
+        jsr B30_0e08
+    .else
+        lda #.BANK(LoadNamingScreen1)
+        ldx #.LOBYTE(LoadNamingScreen1-1)
+        ldy #.HIBYTE(LoadNamingScreen1-1)
+        jsr TempUpperBankswitch
+    .endif
+
+    jsr ResetScroll
+
+    ;load graphics
+    BankswitchCHR_Address naming_screen_chr_table
+    ;load palettes
+    LoadPalette_Address naming_screen_palettes
+
+    B20_142C:
+    ldx #(6*2)
+    jsr B20_1505
+    jsr B20_14d7
+    jsr B20_150e ;wait for input
+
+    B20_1437:
+    lda #0
+    sta UNK_D6
+
+    ;get offset
+    ldy menucursor_pos
+    lda (UNK_84), y
+    asl a
+    tax
+
+    ;stash pointer into stack
+    lda unk_pointers+1, x
+    pha
+    lda unk_pointers, x
+    pha
+
+    tya
+    lsr a
+    lsr a
+
+    rts
+
+unk_pointers:
+    .addr B19_1e88-1
+    .addr B20_148c-1
+    .addr B20_1472-1
+    .ifdef VER_JP
+        .addr B20X_148c-1
+    .endif
+    .addr something_init-1
+
+
+something_init:
+    pha
+    jsr EnablePRGRam
+
+    .ifdef VER_JP
+        lda #.BANK(Music_Tick)+1 ;sram
+    .else
+        lda #.BANK(MSG_pointerList) ;text pointers + sram
+    .endif
+    ldx #BANK::PRGA000
+    jsr BANK_SWAP
+
+    pla
+    jsr SetupFreshSaveData
+    jsr WriteProtectPRGRam
+    jsr BANKSET_H13
+
+    lda #.BANK(Credits_Entry)
+    ldx #BANK::PRGA000
+    jsr BANK_SWAP
+    jmp Credits_Entry
+
+start_game_real:
+    lda #.BANK(Game_Begin)
+    ldx #BANK::PRGA000
+    jsr BANK_SWAP
+
+    lda #.BANK(Music_Tick)
+    sta music_bank
+    jmp Game_Begin
+
+B20_1472:
+    jsr B20_14c0
+    bne B20_1489
+    lda save_slot
+    jsr B19_1ebb
+    jsr EnablePRGRam
+    ldy #3
+    lda #0
+    sta (UNK_68), y
+    jsr WriteProtectPRGRam
+    B20_1489:
+    jmp B20_142C
+
+.ifdef VER_JP
+B20X_148c:
+    jsr B19_1e88
+    jsr EnablePRGRam
+    jsr ns_save_speedchanger
+    jsr Game_Begin
+    jsr B20_14d7
+    jsr B31_0f7c
+    jmp B20_1437
+.endif
+
+B20_148c:
+    sta UNK_36
+    ldx #$10
+    jsr B20_1505
+    lda UNK_36
+    sec
+    rol a
+    asl a
+    tax
+    jsr B20_150b
+    bit menucursor_pos+1
+    bvs B20_14bd
+    lda menucursor_pos
+    sta UNK_37
+    jsr B20_14c0
+    bcs B20_14ab
+    bne B20_14bd
+    B20_14ab:
+    lda UNK_36
+    jsr B19_1e88
+    jsr EnablePRGRam
+    lda UNK_37
+    ora #$b0
+    sta save_slot
+    jsr Game_Begin
+    B20_14bd:
+    jmp B20_142C
+    B20_14c0:
+    jsr B19_1e88
+    sec
+    bne B20_14d6
+    ldx #$0e
+    jsr ns_load_ui_element
+    jsr WriteTilesIn74
+    ldx #$0e
+    jsr B20_150b
+    clc
+    lda menucursor_pos
+    B20_14d6:
+    rts
+
+B20_14d7:
+    lda #0
+    B20_14d9:
+    sta UNK_36+1
+    lsr a
+    lsr a
+    jsr B19_1e88
+    beq B20_14e4
+    lda #4
+    B20_14e4:
+    sta UNK_36
+    ldx UNK_36+1
+    jsr rts_1
+    lda UNK_36
+    lsr a
+    adc UNK_36+1
+    tax
+    jsr B20_1505
+    clc
+    lda UNK_36+1
+    adc #4
+    cmp #12
+    bcc B20_14d9
+    ldx #12
+    jsr ns_load_choicer
+    jmp rts_4
+
+B20_1505:
+    jsr ns_load_ui_element
+    jmp WriteTilesIn74
+
+B20_150b:
+    jsr ns_load_choicer ; $80 = $6085[x]
+B20_150e:
+    jsr PRINT_CURR_CHOICER
+    .ifdef VER_JP
+        lda #$c5
+    .else
+        lda #$ff
+    .endif
+    jmp B31_10b0
+
+DoWalkingStep:
+    ;if any of these are true, exit
+    lda enemy_group
+    ora fade_flag
+    ora is_scripted
+    ora autowalk_direction
+    ora is_tank
+    ora UNK_24+1
+    bne @quick_exit
+
+    ;UNK_A0 is a kind of movement direction
+    ;'if stepping' in other words
+    ;if UNK_A0.7, exit
+    bit UNK_A0
+    bmi @quick_exit
+
+    ;do onstepeffect
+    jsr OnStepEffect
+
+    ;get areaEncounterDef based on area
+    ldx map_area
+    lda AREA_ENCOUNTER_LIST, x
+
+    @Saveram_Encounter:
+    ;if has, jump
+    bne @EncounterDefExists
+    ;else, write 0
+    sta UNK_24
+    .ifdef VER_JP
+        beq @B20_9595
+    .else
+        @FrequencyFail:
+        lda #0
+        sta enemy_group
+        @quick_exit:
+        rts
+    .endif
+    @EncounterDefExists:
+    ;store areaEncounterDef in y
+    tay
+    ;get 'frequency'
+    and #%00000111
+    ;if frequency != 0, jump
+    bne @EncounterFrequencyExists
+    ;else, get encounter id
+    tya
+    lsr a
+    lsr a
+    lsr a
+
+    ;get areaEncounterDef from savemeta
+    ;specifically, used for the zoo so that encounters can be disabled after the fact
+    jsr GetMetaSaveA
+    jmp @Saveram_Encounter
+
+    @EncounterFrequencyExists:
+    clc
+
+    ;if frequency is >= 9, cap it to 8
+    adc UNK_24
+    cmp #9
+    bcc @NoForceCap
+    lda #8
+    @NoForceCap:
+    ;move frequency to x
+    tax
+
+    ;get a random value
+    jsr RNG_BYTE
+
+    ;get the frequency value
+    cmp AREA_FREQ_TABLE-1, x
+    ;if random value >= area_freq_table[x], leave
+    bcs @FrequencyFail
+    ;else, pick an enemy
+    ;;;FREQUENCY HAS PASSED
+
+    ;UNK_24++
+    ;if UNK_24 >= 3, set to 2
+    ldx UNK_24
+    inx
+    cpx #3
+    bcc @skip_x_set
+    ldx #2
+    @skip_x_set:
+    stx UNK_24
+
+    ;get areaEncounterDef.id
+    ;;;get pointer into SPAWN_SETS with id
+    ;;;id gets shifted one more time to match sizeof SPAWN
+    ;UNK_68 = (id << 4) + $9200
+    tya
+    and #%11111000
+    sta UNK_68
+    lda #0
+    asl UNK_68
+    rol a
+    adc #.HIBYTE(SPAWN_SETS)
+    sta UNK_68+1
+
+    @battle_roll:
+    ;get random value
+    jsr RNG_BYTE
+    ;only get top nybble
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    ;get battle id from there
+    tay
+    lda (UNK_68), y
+    ;if battle id == 0, keep rerolling
+    beq @battle_roll
+
+    .ifdef VER_JP
+    bne @B20_9595
+    @FrequencyFail:
+    lda #0
+    @B20_9595:
+    sta enemy_group
+    @quick_exit:
+    rts
+    .else
+    ;store in ram
+    sta enemy_group
+
+    ;run repel ring to ward off that battle
+    lda #.BANK(RepelRing_Effect)
+    ldx #.LOBYTE(RepelRing_Effect-1)
+    ldy #.HIBYTE(RepelRing_Effect-1)
+    jsr TempUpperBankswitch
+    rts
+    .endif
+
+    AREA_FREQ_TABLE:
+    ;lookup table for frequencies
+    .byte 4,6,3,13,10,8,6,5
+
+    ;area based encounter sets
+    .define areaEncounterDef(frequency, id) .byte (id << 3) | frequency
+
+    AREA_ENCOUNTER_LIST:
+    .byte 0 ; 0
+    .byte 0 ; 1
+    .byte 0 ; 2
+    areaEncounterDef 1, 2 ; 3
+    areaEncounterDef 3, 3 ; 4
+    areaEncounterDef 2, 4 ; 5
+    .byte 0 ; 6
+    areaEncounterDef 1, 1 ; 7
+    .byte 0 ; 8
+    .byte 0 ; 9
+    .byte 0 ; A
+    .byte 0 ; B
+    .byte 0 ; C
+    .byte 0 ; D
+    .byte 0 ; E
+    .byte 0 ; F
+    .byte 0 ; 10
+    .byte 0 ; 11
+    .byte 0 ; 12
+    .byte 0 ; 13
+    .byte 0 ; 14
+    .byte 0 ; 15
+    .byte 0 ; 16
+    .byte 0 ; 17
+    .byte 0 ; 18
+    .byte 0 ; 19
+    .byte 0 ; 1A
+    .byte 0 ; 1B
+    .byte 0 ; 1C
+    .byte 0 ; 1D
+    .byte 0 ; 1E
+    .byte 0 ; 1F
+    .byte 0 ; 20
+    .byte 0 ; 21
+    .byte 0 ; 22
+    .byte 0 ; 23
+    .byte 0 ; 24
+    .byte 0 ; 25
+    .byte 0 ; 26
+    .byte 0 ; 27
+    .byte 0 ; 28
+    .byte 0 ; 29
+    .byte 0 ; 2A
+    .byte 0 ; 2B
+    .byte 0 ; 2C
+    .byte 0 ; 2D
+    .byte 0 ; 2E
+    .byte 0 ; 2F
+    .byte 0 ; 30
+    .byte 0 ; 31
+    .byte 0 ; 32
+    .byte 0 ; 33
+    .byte 0 ; 34
+    .byte 0 ; 35
+    .byte 0 ; 36
+    .byte 0 ; 37
+    .byte 0 ; 38
+    .byte 0 ; 39
+    .byte 0 ; 3A
+    .byte 0 ; 3B
+    .byte 0 ; 3C
+    .byte 0 ; 3D
+    .byte 0 ; 3E
+    .byte 0 ; 3F
+
+; $95D3
+; UNKNOWN
+OnStepEffect:
+    ldx #0
+    @per_party_member:
+    lda party_members, x
+    ;if party member empty, jump
+    beq @finish_loop
+
+    jsr GetPartyMemberPtr
+
+    ;if not party member has cold, jump
+    ldy #party_info::status
+    lda (UNK_60), y
+    lsr a
+    bcc @not_unconcious
+
+    lda #7
+    bne @is_single_frame
+    @not_unconcious:
+    ;if not party member is poisoned, jump
+    lsr a
+    bcc @finish_loop
+    lda #7
+    @is_single_frame:
+    sta UNK_64
+
+    clc
+
+    txa
+    adc step_count
+    and UNK_64
+    bne @finish_loop
+
+    jsr EnablePRGRam
+
+    sec
+
+    ldy #party_info::curr_hp
+    lda (UNK_60), y
+
+    sbc #1
+    sta UNK_64
+    iny
+    lda (UNK_60), y
+    sbc #0
+    sta UNK_64+1
+    bcc @B20_161b
+
+    lda UNK_64
+    ora UNK_64+1
+    beq @B20_161b
+    lda UNK_64+1
+    sta (UNK_60), y
+    dey
+    lda UNK_64
+    sta (UNK_60), y
+
+    @B20_161b:
+    jsr WriteProtectPRGRam
+
+    ;do Cold/Poison red flash
+    txa
+    pha
+    lda #$16
+    jsr BackupAndFillPalette
+    jsr RestoreAndUpdatePalette
+    pla
+    tax
+
+    @finish_loop:
+
+    ;if all party members looped, exit
+    inx
+    cpx #4
+    bcc @per_party_member
+
+    rts
+
+;battle start?
+B20_1630:
+    ;if battle == giegue, dont bother doing battle circle
+    lda enemy_group
+    cmp #$A2
+    beq giegue_escape
+    ;white flash?
+    lda #$30
+    jsr BackupAndFillPalette
+    jsr RestoreAndUpdatePalette
+    jsr Refresh_SpriteObjects
+    B20_1641:
+    ;;start write_addrs command
+    ;07 00 "WRITE_PPU"
+    lda #NMI_COMMANDS::PPU_WRITE_ADDRS
+    sta nmi_queue
+    lda #0
+    .define bc_loopcount UNK_60
+    .define bc_hi UNK_60+1
+    .define bc_lo UNK_62
+    .define bc_nmicount nmi_queue+1
+    sta bc_nmicount
+    sta bc_loopcount
+
+    @loop:
+    ;get battle_circle byte
+    ldx bc_loopcount
+    lda Battle_circle, x
+    ;if $ff, escape
+    cmp #$ff
+    beq @escape
+
+    ;store high nybble in bc_hi
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    sta bc_hi
+
+    ;store low nybble in bc_lo
+    lda Battle_circle, x
+    and #%00001111
+    sta bc_lo
+
+    ;render 1
+    jsr BattleCircle_Render
+
+    ;swap hi and lo
+    ldx bc_hi
+    ldy bc_lo
+    sty bc_hi
+    stx bc_lo
+
+    ;render 2
+    jsr BattleCircle_Render
+
+    inc bc_loopcount
+    bne @loop
+    @escape:
+    lda bc_nmicount
+    cmp #0
+    beq giegue_escape
+
+    lda #0
+    sta nmi_data_offset
+
+    lda #1
+    sta new_animation_timer
+
+    giegue_escape:
+    rts
+
+;in:
+;bc_lo = low nybble of battle_circle byte
+;bc_hi = high nybble of battle_circle byte
+BattleCircle_Render:
+    ;ntbl_y = 14 - bc_lo
+    ;clamp to 0 - 14 inclusive
+    lda #14
+    sec
+    sbc bc_lo
+    bcs @no_carry
+    lda #0
+    @no_carry:
+    sta ntbl_y
+
+    ;store result
+    pha
+
+    ;ntbl_x = 15 - bc_hi
+    lda #15
+    sec
+    sbc bc_hi
+    sta ntbl_x
+
+    jsr B20_16b8
+
+    lda #$f
+    clc
+    adc bc_lo
+    cmp #$1e
+    bcc @no_carry2
+    lda #$1d
+    @no_carry2:
+    sta ntbl_y
+
+    jsr B20_16b8
+
+    lda #$10
+    clc
+    adc bc_hi
+    sta ntbl_x
+
+    jsr B20_16b8
+
+    ;restore result
+    pla
+    sta ntbl_y
+    ;fallthrough
+
+    B20_16b8:
+    ;if bc_nmicount < 20, jump
+    lda bc_nmicount
+    cmp #20
+    bcc @not_20
+
+    lda #0
+    sta nmi_data_offset
+    lda #1
+    sta new_animation_timer
+
+    jsr PpuSync
+
+    lda #0
+    sta bc_nmicount
+
+    @not_20:
+    ;ntbl_y and ntbl_x get sent to UNK_78 and UNK_79 respectively
+    jsr CalculateNTAddr
+
+    ;x = (bc_nmicount << 1) + bc_nmicount
+    ;basically, x = bc_nmicount * 3
+    lda bc_nmicount
+    asl a
+    clc
+    adc bc_nmicount
+    tax
+
+    ;write pointer
+    ; nmi_queue[2:3] = UNK_78, UNK_79
+    lda UNK_78
+    sta nmi_queue+2, x
+    lda UNK_79
+    sta nmi_queue+3, x
+    ;end. gets overwritten with more data
+    ; nmi_queue[4:5] = 0
+    lda #0
+    sta nmi_queue+4, x
+    sta nmi_queue+5, x
+
+    ;bc_nmicount++
+    inc bc_nmicount
+    rts
+
+; $96F1 - battle circle
+Battle_circle:
+    ;ringlayer high     ;ring layer????
+    ;each nybble represents a layer
+    ;hhhhllll
+    ;h represents a ring from the center, 0 being nearest and f being farthest
+    ;l represents the amount of fill of that ring?
+    ;but specifically a 'line' of fill. think another ring inside THAT ring
+    ;therefore, every permutation must be filled for the screen to be completely covered
+    .byte $00, $fe, $10, $fd, $ee, $11, $fb, $fc
+    .byte $ed, $20, $21, $ec, $dd, $30, $31, $22
+    .byte $f9, $fa, $eb, $dc, $40, $41, $32, $33
+    .byte $f7, $f8, $e9, $ea, $db, $cc, $42, $da
+    .byte $50, $51, $52, $43, $f4, $f5, $f6, $e7
+    .byte $e8, $d9, $ca, $cb, $60, $61, $62, $53
+    .byte $44, $bb, $f0, $f1, $f2, $f3, $54, $e4
+    .byte $e5, $e6, $d7, $d8, $c9, $ba, $70, $71
+    .byte $72, $63, $64, $55, $c8, $80, $e0, $81
+    .byte $e1, $82, $e2, $73, $e3, $74, $d4, $65
+    .byte $d5, $d6, $c7, $b8, $a9, $b9, $aa, $d0
+    .byte $d1, $d2, $d3, $c4, $c5, $66, $c6, $b7
+    .byte $a8, $99, $90, $91, $92, $83, $84, $75
+    .byte $76, $b6, $c0, $c1, $c2, $93, $c3, $b4
+    .byte $85, $b5, $a6, $a7, $88, $98, $a0, $a1
+    .byte $a2, $a3, $94, $95, $86, $77, $97, $b0
+    .byte $b1, $b2, $b3, $a4, $a5, $96, $87, $ff
+
+; $9779 - TODO: Giegue battle intro?
+GiegueIntro:
+    lda #$38
+    jsr B31_0e21
+
+    lda #$05
+    jsr GiegueGeneric
+
+    lda #.LOBYTE(GiegueCommandIntro1)
+    ldx #.HIBYTE(GiegueCommandIntro1)
+    jsr GiegueCommandInterpreter
+
+    ;mute music
+    lda #$ff
+    jsr PlayMusic
+
+    ;wait 180 frames
+    ldx #180
+    jsr WaitXFrames_Min1
+
+    ;backup & fill palette with black
+    lda #$0f
+    jsr BackupAndFillPalette
+
+    ;irq_count = 0
+    lda #0
+    sta irq_count
+
+    ;???
+    jsr LoadNamingScreen2
+    jmp InitPartyObjects
+
+GiegueOutro:
+    lda #$0e
+    jsr GiegueGeneric
+
+    ;3... 2... 1...
+    lda #.LOBYTE(GiegueCommandOutro1)
+    ldx #.HIBYTE(GiegueCommandOutro1)
+    jsr GiegueCommandInterpreter
+
+    ;clear music
+    lda #$ff
+    jsr PlayMusic
+
+    ;rumble rumble rumble
+    lda #.LOBYTE(GiegueCommandOutro2)
+    ldx #.HIBYTE(GiegueCommandOutro2)
+    jsr GiegueCommandInterpreter
+
+    ;rocket sound
+    lda #Noise_Rocket
+    sta soundqueue_noise
+
+    ;dimslip sound
+    lda #PulseG1_DimensionSlip
+    sta soundqueue_pulseg1
+
+    ;blasting off again!
+    lda #.LOBYTE(GiegueCommandOutro3)
+    ldx #.HIBYTE(GiegueCommandOutro3)
+    jsr GiegueCommandInterpreter
+
+    .ifdef VER_JP
+    lda #$2d
+    jsr PlayMusic
+
+    ldx #$ef
+    jsr WaitXFrames_Min1
+
+    ldx #1*.sizeof(SpriteObject)
+    @B20_97e5:
+    jsr PpuSync
+
+    clc
+    lda #$10
+    adc SPRITE_OBJECTS+SpriteObject::sprite_def_ptr, x
+    sta SPRITE_OBJECTS+SpriteObject::sprite_def_ptr, x
+    lda #0
+    adc SPRITE_OBJECTS+SpriteObject::sprite_def_ptr+1, x
+    sta SPRITE_OBJECTS+SpriteObject::sprite_def_ptr+1, x
+    lda #$78
+    sta new_animation_timer
+    clc
+    txa
+    adc #.sizeof(SpriteObject)
+    tax
+    cpx #5*.sizeof(SpriteObject)
+    bcc @B20_97e5
+
+    ldx #240
+    jsr WaitXFrames_Min1
+    lda #0
+    sta UNK_6A
+    lda #$4c
+    jsr LoadGiegueCliffTiles
+    jsr EnablePRGRam
+
+    ldx #-1
+    @copy_player_name:
+    inx
+    lda player_name, x
+    .define temp_playerName $6e48
+    sta temp_playerName, x
+    bne @copy_player_name
+
+    jsr WriteProtectPRGRam
+
+    lda #.LOBYTE(Credits_CHR)
+    ldx #.HIBYTE(Credits_CHR)
+    jsr BankswitchCHRFromTable
+
+    jsr B20_198b
+    jsr B20_19a3
+    jsr PpuSync
+    stx scroll_x
+    sty scroll_y
+
+    @B20_9839:
+
+    lda #.LOBYTE(B20_19f2)
+    ldx #.HIBYTE(B20_19f2)
+    jsr GiegueCommandInterpreter
+
+    ldx #9
+    jsr WaitXFrames_Min1
+
+    lda UNK_6A
+    cmp #$34
+    bcc @B20_9839
+
+    jsr WAIT_CLOSE_MENU
+
+    ldx #7*.sizeof(SpriteObject)
+    @B20_9850:
+    jsr PpuSync
+    lda #0
+    sta SPRITE_OBJECTS+SpriteObject::count_flags, x
+    sec
+    txa
+    sbc #.sizeof(SpriteObject)
+    tax
+    bcs @B20_9850
+
+    lda #$3c
+    sta new_animation_timer
+
+    ldx #$0a
+    ldy #$10
+    stx ntbl_x
+    sty ntbl_y
+
+    ldx #$e0
+    @B20_986d:
+    txa
+    pha
+    jsr AddTileViaNMI
+    inc ntbl_x
+    ldx #2
+    jsr WaitXFrames_Min1
+    pla
+    tax
+    inx
+    cpx #$ef
+    bcc @B20_986d
+
+    @INFLOOP:
+    jmp @INFLOOP
+
+    .else
+    ;swap to credits
+    lda #.BANK(Credits_Entry)
+    ldx #BANK::PRGA000
+    jsr BANK_SWAP
+    jmp Credits_Entry
+    .endif
+
+
+GiegueCommandInterpreter:
+    ;UNK_68 = pointer to giegue command
+    sta UNK_68
+    stx UNK_68+1
+
+    ;UNK_6A+1 = 0
+    ldy #0
+    sty UNK_6A+1
+
+    @mainloop:
+    ;get byte from pointer
+    lda (UNK_68), y
+    ;break if 0
+    beq @break
+
+    ;UNK_6C = word
+    sta UNK_6C
+    iny
+    lda (UNK_68), y
+    sta UNK_6C+1
+
+    iny
+
+    ;if !word.hi & 0x20, skip
+    and #%00100000
+    beq @no_shift
+    ;else,
+    ;UNK_6A+1 << 1 << c
+    sec
+    rol UNK_6A+1
+    @no_shift:
+
+    ;store y
+    tya
+    pha
+
+    ;if !word.hi & 3, skip
+    lda UNK_6C+1
+    and #%00000011
+    beq @no_flash
+    ;;do flash
+
+    ;a = GiegueCliff_BGFlash[a]
+    tax
+    lda GiegueCliff_BGFlash, x
+    ;fill bg with a
+    jsr FillBackgroundColor
+    ;wait a frame
+    jsr WaitNMI
+    ;set bg to black again
+    lda #$0f
+    jsr FillBackgroundColor
+
+    @no_flash:
+
+    ;wait a frame
+    jsr WaitNMI
+
+    ;if UNK_6A+1 != 0, jump
+    lda UNK_6A+1
+    bne @isnt_zero
+
+    ;if UNK_6C & 3, jump
+    lda UNK_6C
+    and #%00000011
+    bne @do_no_loop_probably
+    @isnt_zero:
+
+    ;????
+    lsr a
+    @loop:
+    pha
+    jsr B20_183d
+    pla
+    sec
+    sbc #1
+    bpl @loop
+
+    @do_no_loop_probably:
+
+    ;if !(((UNK_6C << 2) & UNK_6C+1) & 4), jump
+    ;because UNK_6C is the length
+    ;shift left twice gets lsb in bit 3
+    ;and UNK_6C+1 checks if should shake (bit 3)
+    ;and 4 checks if true
+    ;;;if bit 0 of UNK_6C and UNK_6C+1 & shake, shake.
+    lda UNK_6C
+    asl a
+    asl a
+    and UNK_6C+1
+    and #%00000100
+    beq @no_shake
+    ;shake
+
+    ;by this point, a will always be 4
+    ;scroll_x.2 = !scroll_x.2
+    lsr a
+    eor scroll_x
+    sta scroll_x
+
+    ;play rocket noise
+    lda #Noise_RocketLand
+    sta soundqueue_noise
+
+    @no_shake:
+
+    dec UNK_6C
+    bne @no_flash
+
+    pla
+    tay
+    bne @mainloop
+
+    @break:
+    rts
+
+B20_183d:
+    bit UNK_6C+1
+    bpl @B20_1877
+    bvc @B20_1859
+    jsr B20_1878
+    bne @B20_1851
+    dex
+    cpx #5
+    bcc @B20_1877
+    txa
+    jsr B20_1883
+    @B20_1851:
+    sec
+    lda scroll_y
+    sbc #1
+    jmp @B20_1871
+    @B20_1859:
+    jsr B20_1878
+    eor #$0f
+    bne @B20_186c
+    inx
+    cpx #$3c
+    bcs @B20_1877
+    txa
+    clc
+    adc #$0a
+    jsr B20_1883
+    @B20_186c:
+    clc
+    lda scroll_y
+    adc #$11
+    @B20_1871:
+    bcs @B20_1875
+    sbc #$0f
+    @B20_1875:
+    sta scroll_y
+    @B20_1877:
+    rts
+
+B20_1878:
+    jsr PpuSync
+    ldx UNK_6A
+    clc
+    lda scroll_y
+    and #$0f
+    rts
+
+B20_1883:
+    stx UNK_6A
+    jsr B20_188d
+    lda #$80
+    sta new_animation_timer
+    rts
+
+B20_188d:
+    ldx #$24
+    B20_188f:
+    ;x -> UNK_62
+    stx UNK_62
+
+    ldx #0
+    @B20_1893:
+    cmp #$0f
+    bcc @B20_189c
+    sbc #$0f
+    inx
+    bcs @B20_1893
+    @B20_189c:
+    asl a
+    asl a
+    sta UNK_6E
+    txa
+    lsr a
+    ror a
+    ror a
+    and #$c0
+    ora UNK_6E
+    sta UNK_60
+    lda #6
+    asl UNK_60
+    rol a
+    asl UNK_60
+    rol a
+    asl UNK_60
+    rol a
+    asl UNK_60
+    rol a
+    sta UNK_60+1
+    ora #$03
+    sta UNK_64+1
+    lda UNK_6E
+    and #$38
+    ora #$c0
+    sta UNK_64
+    jsr PpuSync
+    lda #NMI_COMMANDS::PPU_WRITE
+    ldy #$40
+    sta nmi_queue
+    sty nmi_queue+1
+    ldy #8
+    sta nmi_queue+$44
+    sty nmi_queue+$45
+    lda UNK_60+1
+    ldy UNK_60
+    and #$03
+    ora UNK_62
+    sta nmi_queue+2
+    sty nmi_queue+3
+    lda UNK_64+1
+    ldy UNK_64
+    and #$03
+    ora UNK_62
+    sta nmi_queue+$46
+    sty nmi_queue+$47
+    ldy #$3f
+    B20_18f9:
+    lda (UNK_60), y
+    jsr B20_1919
+    sta nmi_queue+4, y
+    dey
+    bpl B20_18f9
+    ldy #7
+    B20_1906:
+    lda (UNK_64), y
+    jsr B20_1919
+    sta nmi_queue+$48, y
+    dey
+    bpl B20_1906
+
+    lda #0
+    sta nmi_queue+$50
+    sta nmi_data_offset
+
+    rts
+
+B20_1919:
+    cpx #4
+    bcc @exit
+    lda #0
+    @exit:
+    rts
+
+GiegueGeneric:
+    sta UNK_6A
+
+    lda #$0b
+    jsr PlayMusic
+
+    jsr B20_19a3
+
+    jsr SetScroll
+
+    jsr ClearSprites
+
+    jsr PpuSync
+
+    ;copy sprite data
+    ldx #(.sizeof(SpriteObject)*2)-1
+    @copy:
+    lda GiegueCliff_Sprites, x
+    sta SPRITE_OBJECTS+8*.sizeof(SpriteObject), x
+    dex
+    bpl @copy
+
+    ;orient party
+    lda #.LOBYTE(GiegueCliff_PartyPos)
+    ldx #.HIBYTE(GiegueCliff_PartyPos)
+    sta UNK_60
+    stx UNK_60+1
+    jsr B31_0087
+
+    ;load tiles
+    ;loads the second half of chrA into saveram $6000-$7000
+    lda #$54
+    jsr LoadGiegueCliffTiles
+
+    ;load chr banks
+    BankswitchCHR_Address GiegueCliff_CHR
+
+    ;new_animation_timer = 1
+    ;draws the (rock) sprites
+    lda #1
+    sta new_animation_timer
+
+    ;draws the cliff
+    ldy #4
+    @tile1loop:
+    tya
+    pha
+    ldx #$20
+    jsr B20_188f
+
+    lda #$80
+    sta new_animation_timer
+
+    pla
+    tay
+    dey
+    bpl @tile1loop
+
+    jsr B20_198b ;???
+
+    ;these draw the cliff over the ship?
+    ldx #(GiegueCliff_BGPal-Giegue_IRQ_Routines)-1
+    @pointercopy:
+    lda Giegue_IRQ_Routines, x
+    sta irq_pointers, x
+    dex
+    bpl @pointercopy
+
+    lda #$9f
+    sta irq_count
+
+    ldx #$1f
+    @palcopy:
+    lda GiegueCliff_BGPal, x
+    sta palette_backup, x
+    dex
+    bpl @palcopy
+
+    ;transition (light)
+    jmp B31_0e30
+
+B20_198b:
+    clc
+    lda UNK_6A
+    adc #11
+    @B20_1990:
+    pha
+    jsr B20_188d
+
+    lda #$80
+    sta new_animation_timer
+
+    pla
+    sec
+    sbc #1
+    bcc @B20_19a2
+    cmp UNK_6A
+    bcs @B20_1990
+    @B20_19a2:
+    rts
+
+B20_19a3:
+    lda UNK_6A
+    asl a
+    asl a
+    asl a
+    asl a
+    tay
+    ldx #$fc
+    rts
+
+LoadGiegueCliffTiles:
+    pha
+    tay
+    lda #.LOBYTE($6000)
+    ldx #.HIBYTE($6000)
+    jsr B30_0e08
+
+    pla
+    clc
+    adc #2
+    tay
+    lda #.LOBYTE($6800)
+    ldx #.HIBYTE($6800)
+    jmp B30_0e08
+
+.macro giegue_command length, arg2, no_roll, arg3, shake, flash
+    .byte length
+    .byte (arg2 << 6) | (no_roll << 5) | (arg3 << 3) | (shake << 2) | flash
+.endmacro
+
+;rise + flash
+GiegueCommandIntro1:
+giegue_command 128,   0, 0, 0, 0, 0
+giegue_command 128, %10, 0, 0, 0, 0
+giegue_command 128, %10, 0, 0, 0, 2
+giegue_command  32, %10, 0, 0, 0, 3
+giegue_command  32, %10, 0, 0, 0, 2
+giegue_command 192, %10, 0, 0, 0, 1
+giegue_command 128, %10, 0, 0, 0, 2
+giegue_command  32, %10, 0, 0, 0, 3
+giegue_command  32, %10, 0, 0, 0, 2
+.byte 0
+
+;go back down? + flashes
+GiegueCommandOutro1:
+giegue_command 128, %11, 0, 0, 0, 0
+giegue_command  32, %11, 0, 0, 0, 3
+giegue_command  32, %11, 0, 0, 0, 2
+giegue_command 128, %11, 0, 0, 0, 1
+giegue_command 128, %11, 0, 0, 0, 3
+.byte 0
+
+;shake
+GiegueCommandOutro2:
+giegue_command 64, 0, 0, 0, 0, 2
+giegue_command 16, 0, 0, 0, 1, 3
+giegue_command 32, 0, 0, 0, 1, 2
+giegue_command 80, 0, 0, 0, 1, 1
+.byte 0
+
+;blast off
+GiegueCommandOutro3:
+giegue_command   8,   0, 1, 0, 0, 3
+giegue_command   8,   0, 1, 0, 0, 2
+giegue_command 240, %10, 1, 0, 0, 1
+giegue_command 240,   0, 0, 0, 0, 0
+.byte 0
+
+B20_19f2:
+    giegue_command 4, %10, 0, 0, 0, 0
+    .byte 0
+    .ifndef VER_JP
+        .byte $a9,$a9,$ab,$aa
+    .endif
+
+; $99F9 - CHR bank table
+;mainchar - evemisc - gieguecliff1 - gieguecliff2 - gieguecliff3 - gieguecliff4
+GiegueCliff_CHR:
+    .byte $76, $70, $50, $51, $52, $53
+
+; $99FF - CHR bank table
+;mainchar - evemisc - jpcred1 - jpcred2 - jpcred3 - jpcred4
+Credits_CHR:
+    .byte $76, $70, $48, $49, $4a, $4b
+
+; $9A05 - Giegue background flash colors
+;transparent - yellow - light blue - pink
+GiegueCliff_BGFlash:
+    .byte $0f, $38, $21, $34
+
+; $9A09 - Giegue IRQ
+Giegue_IRQ_Routines:
+    .addr B31_0dcb-1
+    .addr 0
+
+; $9A0D
+GiegueCliff_BGPal:
+    .byte $0f, $12, $30, $00
+    .byte $0f, $10, $30, $00
+    .byte $0f, $17, $37, $16
+    .byte $0f, $38, $30, $00
+    ;this is just the generic sprite palette
+    .byte $0f, $0f, $00, $30
+    .byte $0f, $0f, $16, $37
+    .byte $0f, $0f, $24, $37
+    .byte $0f, $0f, $12, $37
+
+; $9A2D - Unknown
+GiegueCliff_PartyPos:
+    .byte $68, $78, $00, $00
+    .byte $58, $88, $00, $00
+    .byte $78, $88, $00, $00
+    .byte $68, $98, $00, $00
+
+; $9A3D - Unknown
+GiegueCliff_Sprites:
+    ;SPRITE_OBJECTS data
+    .byte SPRITE_OBJECT_OFFSCREEN_X_DIR | 6 ;6 tiles
+    .byte 0        ;oam slot (gets written over)
+    .byte -12, 118 ;x, y position
+    .byte 0, 0     ;x, y velocity
+    .addr SPRITEDEF_GIEGUECLIFF1 ;spritedef pointer
+
+    .byte 6        ;6 tiles
+    .byte 0        ;oam slot (gets written over)
+    .byte 228, 118 ;x, y position
+    .byte 0, 0     ;x, y velocity
+    .addr SPRITEDEF_GIEGUECLIFF2 ;spritedef pointer
+
+.define NameLength UNK_50+6
+.define CurrentLetterIndex UNK_50+5
+
+.define ninten_question NS_QuestionSetups+(0*6)
+.define ana_question NS_QuestionSetups+(1*6)
+.define lloyd_question NS_QuestionSetups+(2*6)
+.define teddy_question NS_QuestionSetups+(3*6)
+.define food_question NS_QuestionSetups+(4*6)
+
+NS_ShowRecap:
+    ;lists off all your answers
+    lda #.LOBYTE(NS_Recap_Tiles)
+    ldx #.HIBYTE(NS_Recap_Tiles)
+    jsr NS_LoadTiles
+
+    ;Is this OK?
+    lda #.LOBYTE(NS_Recap_Confirmation_Tiles)
+    ldx #.HIBYTE(NS_Recap_Confirmation_Tiles)
+    jsr NS_LoadTiles
+
+    ;show the characters
+    jsr NS_PrepCharIcons
+
+    ;set item to 0
+    ldy #0
+    @loop:
+    jsr NS_DisplayCharacter
+
+    jsr B25_1a9b
+    cmp #$20
+    bne @loop
+
+    rts
+
+;inherits NS_AddCharacterToOam's arguments
+NS_DisplayCharacter:
+    jsr PpuSync
+    jmp NS_AddCharacterToOam
+
+;x:a -> tilepack_ptr
+;loads tile data (pointer) to tilepack_ptr??
+NS_LoadTiles:
+    sta tilepack_ptr
+    stx tilepack_ptr+1
+    jmp WriteTilesIn74
+
+NS_FinalChoicer:
+    ;process choicer
+    lda #.LOBYTE(finalSetup)
+    ldx #.HIBYTE(finalSetup)
+    sta UNK_80
+    stx UNK_80+1
+
+    ;wait for input
+    jsr PRINT_CURR_CHOICER
+
+    ;if menucursor_pos == 0 (Yes), continue
+    lda menucursor_pos
+    beq @finalize
+    ;else (No), return carry flag
+    sec
+    rts
+    @finalize:
+    clc
+    rts
+
+.ifdef VER_JP
+B20_9bab:
+    ;ask for your preferred speed
+    lda #.LOBYTE(NS_Recap_Speed_Tiles)
+    ldx #.HIBYTE(NS_Recap_Speed_Tiles)
+    jsr NS_LoadTiles
+
+    lda #1
+    sta UNK_50+7
+
+    lda #.LOBYTE(@B20_9c20)
+    ldx #.HIBYTE(@B20_9c20)
+    sta UNK_80
+    stx UNK_80+1
+    jsr PRINT_CURR_CHOICER
+    jmp @B20_9bd0
+    @B20_9bc4:
+    lda UNK_50+7
+    asl a
+    asl a
+    clc
+    adc #10
+    sta ntbl_x
+    jsr B31_0f7c
+    @B20_9bd0:
+    lda menucursor_pos+1
+    and #$80
+    bne @B20_9c02
+    lda menucursor_pos+1
+    and #$02
+    bne @B20_9be2
+    lda menucursor_pos+1
+    and #$01
+    bne @B20_9bf2
+    @B20_9be2:
+    sec
+    lda UNK_50+7
+    sbc #1
+    cmp #$ff
+    bne @B20_9bed
+    lda #0
+    @B20_9bed:
+    sta UNK_50+7
+    jmp @B20_9bc4
+    @B20_9bf2:
+    clc
+    lda UNK_50+7
+    adc #1
+    cmp #3
+    bne @B20_9bfd
+    lda #2
+    @B20_9bfd:
+    sta UNK_50+7
+    jmp @B20_9bc4
+    @B20_9c02:
+    lda UNK_50+7
+    jsr JMPTable
+    .addr @fastest
+    .addr @medium
+    .addr @slowest
+    @fastest:
+    ldx #5
+    bne @write
+    @medium:
+    ldx #30
+    bne @write
+    @slowest:
+    ldx #80
+    @write:
+    jsr EnablePRGRam
+    stx save_file_current+save_meta::battle_message_speed
+    jmp WriteProtectPRGRam
+@B20_9c20:
+    .byte 1, 1 ;width/height
+    .byte 0, 0 ;x/y inc
+    .byte PAD_RIGHT | PAD_LEFT | PAD_A ;bits
+    .byte $3A ;tile
+    .byte 14, 24 ;x/y init
+    .addr @B20_9c20
+.endif
+
+do_story_print:
+    lda #0
+    sta UNK_70
+
+    stx tilepack_ptr
+    sty tilepack_ptr+1
+
+    @loop:
+    jsr PRINT_STRING
+    .ifdef VER_JP
+        pha
+        ldx #30
+        jsr WaitXFrames
+        pla
+    .else
+        dec ntbl_y
+    .endif
+    cmp #0
+    bne @loop
+
+    ;wait for an a or b press
+    jsr WaitABPressed
+
+    jmp B20_1d50 ;transition (dark)
+
+B20_1B2A:
+    jsr B20_1d50 ;transition (dark)
+    jsr ResetScroll
+    .ifdef VER_JP
+        jsr NS_LoadQuestionBox
+        lda #.LOBYTE(NS_EntryBox)
+        ldx #.HIBYTE(NS_EntryBox)
+        jsr NS_LoadTiles
+        lda #.LOBYTE(NS_AlphabetBox)
+        ldx #.HIBYTE(NS_AlphabetBox)
+        jsr NS_LoadTiles
+        lda #.LOBYTE(NameCharacters)
+        sta UNK_64
+        lda #.HIBYTE(NameCharacters)
+        sta UNK_64+1
+        lda #6
+        sta UNK_62+1
+        ldx #10
+    B20_9c6b:
+        txa
+        pha
+        lda #4
+        sta UNK_62
+        ldx #4
+    B20_9c73:
+        txa
+        pha
+        lda UNK_62
+        sta ntbl_x
+        lda UNK_62+1
+        sta ntbl_y
+        lda UNK_64
+        sta tilepack_ptr
+        lda UNK_64+1
+        sta tilepack_ptr+1
+        jsr DrawTilepackClear
+        jsr B25_1ab5_new
+        pla
+        tax
+        dex
+        bne B20_9c73
+        jsr B25_1ab5
+        pla
+        tax
+        dex
+        bne B20_9c6b
+        lda #.LOBYTE(NS_AlphabetOptions)
+        ldx #.HIBYTE(NS_AlphabetOptions)
+        jsr NS_LoadTiles
+    .else
+        ;the box surrounding the alphabet
+        lda #.LOBYTE(NS_AlphabetBox)
+        ldx #.HIBYTE(NS_AlphabetBox)
+        jsr NS_LoadTiles
+        jsr B20_1B40
+        jsr NS_LoadQuestionBox
+    .endif
+
+
+    jmp B31_0e30;transition (light)
+
+.ifndef VER_JP
+B20_1B40:
+    lda #.LOBYTE(NameCharacters)
+    sta UNK_64
+    lda #.HIBYTE(NameCharacters)
+    sta UNK_64+1
+    lda #14
+    sta UNK_62+1
+    ldx #4
+    B20_1b4e:
+    txa
+    pha
+    lda #8
+    sta UNK_62
+    lda UNK_62
+    sta ntbl_x
+    lda UNK_62+1
+    sta ntbl_y
+    lda UNK_64
+    sta tilepack_ptr
+    lda UNK_64+1
+    sta tilepack_ptr+1
+    jsr DrawTilepackClear
+    jsr B25_1ab5
+    pla
+    tax
+    dex
+    bne B20_1b4e
+
+    ;back end previous
+    lda #.LOBYTE(NS_AlphabetOptions)
+    ldx #.HIBYTE(NS_AlphabetOptions)
+    jmp NS_LoadTiles
+.endif
+
+NS_LoadQuestionBox:
+    ;self explanatory
+    lda #.LOBYTE(NS_QuestionBox)
+    ldx #.HIBYTE(NS_QuestionBox)
+    jmp NS_LoadTiles
+
+CurrentName := UNK_580
+Menu_Question_Addr = UNK_50+$C ;2 bytes
+Current_Name_Addr = UNK_60 ;2 bytes, taken from ^
+
+;x:a == question pointer
+NS_LoadQuestion:
+    ;takes an address and assigns it to $5c
+    sta Menu_Question_Addr
+    stx Menu_Question_Addr+1
+
+    ;Current_Name_Addr <- Menu_Question_Addr.SPRITEDEF
+    ldy #0
+    jsr NS_MQAToCNA
+
+    ;if Current_Name_Addr == 0, jump
+    ;(eg, last question)
+    ora Current_Name_Addr
+    beq @has_no_sprite
+    ;else,
+
+    ;set x,y to $22,$ff
+    .ifdef VER_JP
+        lda #4
+        sta UNK_62
+        lda #$f8
+    .else
+        lda #$22
+        sta UNK_62
+        lda #$ff
+    .endif
+    sta UNK_62+1
+    ;set oam slot to $80
+    lda #$80
+    sta UNK_64
+    ;set item to 0
+    ldy #0
+    ;UNK_60 is the currently loaded question pointer
+    jsr NS_DisplayCharacter
+
+    @has_no_sprite:
+    ;show question?
+    jsr B20_1bf7
+
+    .ifdef VER_JP
+    jsr B25_1a9b_new
+    .else
+    ;hide name entry for a second (does nothing functionally)
+    lda #.LOBYTE(NS_NameEntry_Blankout)
+    ldx #.HIBYTE(NS_NameEntry_Blankout)
+    jsr NS_LoadTiles
+
+    ;Current_Name_Addr <- Menu_Question_Addr.WRITEADDR
+    ldy #4
+    jsr NS_MQAToCNA
+
+    ;y = name end
+    ldy NameLength
+
+    lda #0
+    ; UNK_70 = 0
+    sta UNK_70
+    ;zero terminate CurrentName
+    sta CurrentName+1, y
+
+    ;CurrentLetterIndex = name end
+    sty CurrentLetterIndex
+
+    ;if Current_Name_Addr[y] == 0, replace with '?'
+    @remove_whitespace:
+    lda (Current_Name_Addr), y
+    bne @dont_replace
+    sty CurrentLetterIndex
+    lda #'?'
+    @dont_replace:
+    sta CurrentName, y
+    dey
+    bpl @remove_whitespace
+    .endif
+
+    jsr B20_1C1C
+    bcs B20_1be8
+
+    ;Current_Name_Addr <- Menu_Question_Addr.WRITEADDR
+    ldy #4
+    jsr NS_MQAToCNA
+
+    jsr EnablePRGRam
+
+    ;put current cursor to y
+    ldy NameLength
+    @loop:
+    ;get stored character at y
+    lda CurrentName, y
+    ;check for "?" (blank)
+    cmp #'?'
+    bne @isnt_blank
+    ;if blank, set to 0
+    lda #0
+    @isnt_blank:
+    ;store in sram
+    sta (Current_Name_Addr), y
+    dey
+    bpl @loop
+    jsr WriteProtectPRGRam
+    jsr ClearSprites
+    clc
+    rts
+
+B20_1be8:
+    jsr ClearSprites
+    sec
+    rts
+
+;pointer transfer
+NS_MQAToCNA:
+    lda (Menu_Question_Addr), y
+    sta Current_Name_Addr
+    iny
+    lda (Menu_Question_Addr), y
+    sta Current_Name_Addr+1
+
+    rts
+
+B20_1bf7:
+    ;load question box
+    jsr NS_LoadQuestionBox
+
+    ;wait 8 frames
+    ldx #8
+    jsr WaitXFrames
+
+    ;Current_Name_Addr <- Menu_Question_Addr.QUESTION
+    ldy #2
+    jsr NS_MQAToCNA
+
+    B20_1c04:
+    ;load to tilepack_ptr
+    lda Current_Name_Addr
+    sta tilepack_ptr
+    lda Current_Name_Addr+1
+    sta tilepack_ptr+1
+
+    ;x,y
+    .ifdef VER_JP
+        lda #5
+    .else
+        lda #9
+    .endif
+    sta ntbl_x
+    lda #3
+    sta ntbl_x+1
+
+    .ifdef VER_JP
+        jmp DrawTilepackClear
+    .else
+        @wait:
+        jsr DrawTilepackClear
+        cmp #0
+        bne @wait
+        rts
+    .endif
+
+B20_1C1C:
+    jsr NS_LoadCursor
+
+    B20_1C1F:
+    ;load setup pointer to UNK_80
+    lda #.LOBYTE(letterSetup)
+    ldx #.HIBYTE(letterSetup)
+    sta UNK_80
+    stx UNK_80+1
+
+    ;load alphabet to UNK_84
+    lda #.LOBYTE(NameCharacters)
+    ldx #.HIBYTE(NameCharacters)
+    sta UNK_84
+    stx UNK_84+1
+
+    ;UNK_D6 = 1
+    lda #1
+    sta UNK_D6
+
+    B20_1C33:
+    ;wait for input
+    jsr B31_0f3f
+
+    jmp B20_1C3f
+
+B20_1C39:
+    jsr NS_LoadCursor
+    jsr B31_0f7c
+    B20_1C3f:
+    ;if PAD_B, backspace
+    bit menucursor_pos+1
+    bvs NS_Backspace
+    ;if PAD_A, add character
+    bmi NS_InputCharacter
+    ;if PAD_START, confirm
+    lda menucursor_pos+1
+    and #PAD_START
+    bne NAME_CHECK
+
+
+    jmp B20_1C33
+
+NS_InputCharacter:
+    ldx menucursor_pos ; cursor (x*width)+y value
+    lda NameCharacters, x
+    .ifdef VER_JP
+        cmp #$c1
+        beq B20_1c6e
+
+        cmp #$c2
+        beq NAME_CHECK
+
+
+        ;write
+        ldx CurrentLetterIndex
+        sta CurrentName, x
+
+        ;if CurrentLetterIndex == NameLength, dont increment
+        cpx NameLength
+        beq @no_inc
+        inx
+        stx CurrentLetterIndex
+        @no_inc:
+        jmp B20_1C39
+
+    NAME_CHECK:
+        lda CurrentLetterIndex
+        beq B20_9dae
+        ldx #0
+    B20_9d75:
+        stx UNK_60
+        ldy #0
+    B20_9d79:
+        ;load existing name entries
+        lda ExistEntries, x
+        ;branch if end of line
+        beq B20_9d94 ;if this jumps, it was an unsuccessful check
+        cmp CurrentName, y
+        bne B20_9d8b
+        inx
+        iny
+        cpy #6
+        bne B20_9d79
+        beq B20_9d9a
+    B20_9d8b:
+        clc
+        lda UNK_60
+        adc #6
+        tax
+        jmp B20_9d75
+    B20_9d94:
+        lda #0
+        sta UNK_D6
+        clc
+        rts
+    B20_9d9a:
+        jsr ErrBuzzer
+        lda #.LOBYTE(ChangeName)
+        ldx #.HIBYTE(ChangeName)
+        sta UNK_60
+        stx UNK_60+1
+        jsr B20_1c04
+        jsr WaitABPressed
+        jsr B20_1bf7
+    B20_9dae:
+        jmp B20_1C1F
+
+    .else
+    ;if char == Back, backspace
+    cmp #$a1
+    beq NS_Backspace
+
+    ;if char == End, confirm
+    cmp #$a2
+    beq NAME_CHECK
+
+    ;if char == Previous, go back
+    cmp #$a3
+    beq B20_1c6e
+
+    ;write
+    ldx CurrentLetterIndex
+    sta CurrentName, x
+
+    ;if CurrentLetterIndex == NameLength, dont increment
+    cpx NameLength
+    beq @no_inc
+    inx
+    stx CurrentLetterIndex
+    @no_inc:
+    jmp B20_1C39
+
+    .endif
+B20_1c6e:
+    sec
+    rts
+
+
+NS_Backspace:
+    ;load filler character
+    lda #'?'
+
+    ;CurrentLetterIndex - NameLength
+    ldx CurrentLetterIndex
+    cpx NameLength
+    ;if result != 0, skip
+    bne @skip
+    cmp CurrentName, x
+    bne @as_long
+    @skip:
+    ;fill at CurrentName[x] with '?'
+    sta CurrentName, x
+    ;x--
+    dex
+    ;if x < 0, jump
+    bmi @go_negative
+    stx CurrentLetterIndex
+    @as_long:
+    ;fill at CurrentName[x] with '?' (this is where it actually backspaces)
+    .ifdef VER_JP
+        @go_negative:
+        sta CurrentName, x
+    .else
+        sta CurrentName, x
+        @go_negative:
+    .endif
+    jmp B20_1C39
+
+.ifndef VER_JP
+NAME_CHECK:
+    ;ram - amount of characters/char index
+    ldy CurrentLetterIndex
+@UNKNOWN3:
+    lda CurrentName, y
+    ;if char == ? (blank)
+    cmp #'?'
+    beq @UNKNOWN4 ;if z set
+    ;if char != " " (normal)
+    cmp #' '
+    bne @UNKNOWN5 ;if z not set
+    lda #'?'
+    sta CurrentName, y
+@UNKNOWN4:
+    dey
+    bpl @UNKNOWN3
+@UNKNOWN5:
+    cpy NameLength
+    beq @UNKNOWN6
+    iny
+@UNKNOWN6:
+    sty CurrentLetterIndex
+    ;if y == 0, branch
+    cpy #0
+    beq @B20_1d07
+
+    ldx #0
+    @EXIST_LOOP_AGAIN:
+    ldy #0
+
+    @EXIST_LOOP:
+    ;load existing name entries
+    ;get a byte
+    lda ExistEntries, x
+    ;if byte == 0, finish checking (unsuccessful check)
+    beq @end
+    ;if byte == 1, trigger error (successful check)
+    cmp #newLine
+    beq @err
+    ;x += 1
+    ;y += 1
+    inx
+    iny
+
+    ;compare against the player's entry
+    cmp CurrentName-1, y
+    ;loop if equal
+    beq @EXIST_LOOP
+    ;fall through if not equal
+
+    ;skips to the next one
+    @EXIST_NEXTENTRY:
+    ;load entry, check if at newline
+    lda ExistEntries, x
+    inx
+    ;loop if no
+    cmp #newLine
+    bne @EXIST_NEXTENTRY
+    ;loop back to main loop if yes
+    beq @EXIST_LOOP_AGAIN
+    @end:
+    ;UNK_D6 = 0
+    lda #0
+    sta UNK_D6
+    clc
+    rts
+
+    @err:
+    ;play the sound
+    jsr ErrBuzzer
+
+    ;draw the box
+    jsr NS_LoadQuestionBox
+
+    ;print the 'please change this name'
+    lda #.LOBYTE(ChangeName)
+    ldx #.HIBYTE(ChangeName)
+    sta UNK_60
+    stx UNK_60+1
+    jsr B20_1c04
+
+    ;if CurrentName[0] = ' ', simply print the "Change Name"
+    lda CurrentName
+    cmp #' '
+    beq @wait
+
+    ;print
+    lda #.LOBYTE(CharExists)
+    ldx #.HIBYTE(CharExists)
+    sta tilepack_ptr
+    stx tilepack_ptr+1
+    ldx #8
+    ldy #14
+    stx ntbl_x
+    sty ntbl_y
+
+    @existloop:
+    jsr DrawTilepackClear
+    cmp #0
+    bne @existloop
+
+    @wait:
+    jsr WaitABPressed
+    jsr B20_1B40
+    jsr B20_1bf7
+
+    @B20_1d07:
+    jmp B20_1C1C
+.endif
+
+NS_LoadCursor:
+    ;stash x,y
+    lda ntbl_x
+    pha
+    lda ntbl_x+1
+    pha
+
+    jsr WaitNMI
+
+    ;a = -NameLength
+    sec
+    .ifdef VER_JP
+        lda #8
+    .else
+        lda #0
+    .endif
+    sbc NameLength
+
+    .ifdef VER_JP
+    lsr a
+    clc
+    adc #$14
+    tay
+    lda #$21
+    .else
+    ;a = (a >> 1) | 0b10000000
+    sec
+    ror a
+
+    ;a += 15
+    clc
+    adc #15
+
+    ;y = a
+    tay
+
+    ;set sprite y to 89
+    lda #89
+    .endif
+    sta shadow_oam+(1*4)
+
+    ;a = y
+    clc
+    tya
+
+    ;a += CurrentLetterIndex
+    adc CurrentLetterIndex
+
+    ;a *= 8
+    asl a
+    asl a
+    asl a
+
+    ;set sprite x to a
+    sta shadow_oam+(1*4)+3
+
+    ;set tile index to 1
+    lda #1
+    sta shadow_oam+(1*4)+1
+
+    ;set attr to 0
+    lda #0
+    sta shadow_oam+(1*4)+2
+
+    ;a = y
+    tya
+
+    ;set x,y to a,10
+    sta ntbl_x
+    .ifdef VER_JP
+        lda #3
+    .else
+        lda #10
+    .endif
+    sta ntbl_x+1
+
+    ;load tiles at CurrentName
+    lda #.LOBYTE(CurrentName)
+    sta tilepack_ptr
+    lda #.HIBYTE(CurrentName)
+    sta tilepack_ptr+1
+
+    jsr DrawTilepackClear
+
+    ;load stored x,y
+    pla
+    sta ntbl_x+1
+    pla
+    sta ntbl_x
+
+    rts
+
+;transition (dark)
+B20_1d50:
+    jsr OT0_DefaultTransition
+    jsr ClearSprites
+    jsr ClearTilemaps
+
+    ;clear attr
+    ldx #.LOBYTE(B25_0afd)
+    ldy #.HIBYTE(B25_0afd)
+    jmp fill_nmi_with_pointer_data
+
+;;; This contains the entire process of the Title Screen.
+Title_Screen:
+    jsr ClearSprites ;clear sprites
+    jsr ClearTilemaps ;clear tilemap 0
+
+    ;reset tilemap address back to $2000
+    ;set scroll to (0,0)
+    lda ram_PPUCTRL
+    and #%11111100
+    ldx #0
+    ldy #0
+    sta ram_PPUCTRL
+    stx scroll_x
+    sty scroll_y
+
+    ;load title chr pages (old)
+    BankswitchCHR_Address Title_CHR_Old
+
+    ;load title palette (old)
+    lda #.LOBYTE(Title_Palette_Old)
+    sta UNK_60
+    lda #.HIBYTE(Title_Palette_Old)
+    sta UNK_60+1
+    jsr LoadPaletteFrom
+
+    ;darken
+    jsr OT0_DefaultTransition
+
+    ;if mother earth playing, dont switch
+    lda #music::mother_earth
+    cmp current_music
+    beq @skip_mus_update
+    ;else switch
+    sta soundqueue_track
+    @skip_mus_update:
+
+    ;
+    lda #.LOBYTE(produced_by_tiles)
+    ldx #.HIBYTE(produced_by_tiles)
+    jsr DoIntroTransition
+
+    lda #.LOBYTE(presented_by_tiles)
+    ldx #.HIBYTE(presented_by_tiles)
+    jsr DoIntroTransition
+
+    lda #.LOBYTE(Title_Palette)
+    sta UNK_60
+    lda #.HIBYTE(Title_Palette)
+    sta UNK_60+1
+    jsr LoadPaletteFrom
+
+    jsr OT0_DefaultTransition
+
+    BankswitchCHR_Address Title_CHR
+
+    lda #.LOBYTE(title_screen_tiles)
+    ldx #.HIBYTE(title_screen_tiles)
+    jsr load_tilemap_into_queue
+
+    earth_oam = SPRITE_OBJECTS+28*.sizeof(SpriteObject)
+    ;get stuff set up for the earth animation
+    lda #0
+    sta UNK_60
+
+    ;7 = ?
+    ;6 = ?
+    ;tiles = 16
+    lda #16
+    sta earth_oam+0
+
+    ;blank out
+    ;- oam
+    ;- pointer 1
+    lda #0
+    sta earth_oam+1
+    sta earth_oam+4
+    sta earth_oam+5
+
+    ;set x
+    lda #108
+    sta earth_oam+2
+
+    ;set y
+    lda #103
+    sta earth_oam+3
+
+    freak_oam = SPRITE_OBJECTS+$c0
+    ;get stuff set up for the earth animation
+    lda #0
+    sta UNK_60+1
+    ;blank out
+    ;- pointer 1
+    sta freak_oam+4
+    sta freak_oam+5
+    ;7 = ?
+    ;6 = ?
+    ;tiles = 16
+    lda #6
+    sta freak_oam+0
+    ;set x
+    lda #240
+    sta freak_oam+2
+    ;set y
+    lda #164
+    sta freak_oam+3
+
+    ;oam slot
+    lda #12
+    sta freak_oam+1
+
+    ;reset input?
+    lda #0
+    sta pad1_forced
+
+    ;UNK_60 is used here to keep track of the current 'frame'.
+    @anim_loop:
+    clc
+
+    ;get current frame
+    lda UNK_60
+    ;+= .LOBYTE(SPRITEDEF_EARTH)
+    adc #.LOBYTE(SPRITEDEF_EARTH)
+    sta earth_oam+6
+    ;why isnt this just a lda #.HIBYTE(SPRITEDEF_EARTH)????
+    lda #0
+    adc #.HIBYTE(SPRITEDEF_EARTH)
+    sta earth_oam+7
+
+    ;tiles += 4
+    lda UNK_60
+    adc #4
+
+    ;if UNK_60 is at 1c it should be 0. set accordingly
+    cmp #SPRITEDEF_EARTH_END-SPRITEDEF_EARTH
+    bcc @skip_reset
+    lda #0
+    @skip_reset:
+    sta UNK_60
+
+    clc
+    ;get current frame
+    lda UNK_60+1
+    ;+= .LOBYTE(SPRITEDEF_EARTH)
+    adc #.LOBYTE(SPRITEDEF_FREAK)
+    sta freak_oam+6
+    lda #0
+    adc #.HIBYTE(SPRITEDEF_FREAK)
+    sta freak_oam+7
+
+    ;x -= 4
+    sec
+    lda freak_oam+2
+    sbc #2
+    sta freak_oam+2
+
+    ;if carry set (overflow), rand y pos
+    bcs @norand
+    jsr RNG_BYTE
+    sta freak_oam+3
+    @norand:
+    clc
+
+
+    ;tiles += 4
+    lda UNK_60+1
+    adc #4
+
+    ;if UNK_60 is at 1c it should be 0. set accordingly
+    cmp #SPRITEDEF_FREAK_END-SPRITEDEF_FREAK
+    bcc @skip_reset2
+    lda #0
+    @skip_reset2:
+    sta UNK_60+1
+
+    lda #10
+    sta new_animation_timer
+    clc
+
+    @wait_for_start:
+    ;check if start pressed at title
+    lda pad1_forced
+    and #PAD_START
+    bne @escape
+
+    ;mini ppusync
+    lda new_animation_timer
+    ora current_animation_timer
+    bne @wait_for_start
+
+    beq @anim_loop
+    @escape:
+    ldx #0
+    stx pad1_forced
+    .ifdef VER_JP
+        jmp OT0_DefaultTransition
+    .else
+        ;do antipiracy check
+        jsr OT0_DefaultTransition
+        lda #.BANK(TITLE_ANTI_PIRACY)
+        ldx #.LOBYTE(TITLE_ANTI_PIRACY-1)
+        ldy #.HIBYTE(TITLE_ANTI_PIRACY-1)
+        jsr TempUpperBankswitch
+        rts
+    .endif
+
+
+;B20_1e2c
+DoIntroTransition:
+    ;load tiles from x:a
+    jsr load_tilemap_into_queue
+
+    ;wait 1
+    ldx #255
+    jsr AdvanceIfPressStart
+
+    ;wait 2
+    ldx #32
+    jsr AdvanceIfPressStart
+
+    jsr OT0_DefaultTransition
+
+    ;fade wait
+    ldx #64
+    jsr AdvanceIfPressStart
+
+    jmp ClearTilemaps
+
+;load tilepointer to tilepack_ptr
+load_tilemap_into_queue:
+    sta tilepack_ptr ;store lo
+    stx tilepack_ptr+1 ;store hi
+
+    @loop:
+    jsr DrawTilepack
+    dec ntbl_y
+    cmp #0
+    bne @loop
+
+    jmp B31_0e30;transition (light)
+
+;B20_1e54
+;wait until start is pressed
+;reg x == frames
+AdvanceIfPressStart:
+    jsr WaitNMI
+    lda pad1_hold
+    and #PAD_START
+    eor #PAD_START
+    beq @escape
+    dex ;break anyways if frames run out
+    bne AdvanceIfPressStart
+    @escape:
+    rts
+
+; $9E63 - CHR bankswitch table
+; spinning earth - evemisc - bold_font - bold_font - mother_title - rTospinning earth
+Title_CHR_Old:
+    .byte $42, $72, $7c, $7c, $40, $41
+
+; $9E69 - CHR bankswitch table
+; spinning earth - evemisc - bold_font - rTospinning earth - earthbound1 - earthbound2
+Title_CHR:
+    .byte $42, $72 ;spr
+    .byte $40, $41, $d8, $d9 ;bg
+
+; $9E6F
+Title_Palette_Old:
+    .byte $0f, $16, $30, $12
+
+; $9E8F
+Title_Palette:
+    .byte $0f, $16, $30, $27
+    .byte $0f, $21, $30, $16
+    .byte $0f, $21, $30, $16
+    .byte $0f, $21, $30, $16
+
+    .byte $0f, $16, $17, $27
+
+; $9EC4 - produced by Nintendo
+produced_by_tiles:
+    ;produced by
+    .byte set_pos 12, 8
+    .byte $C8,$C9,$CA,$CB,$CD,$7f,$CE,$CF
+    ;tail of p
+    .byte 1
+    .byte $D8
+    ;tail of y
+    .byte set_pos 19, 9
+    .byte $DF
+
+    ;line
+    .byte set_pos 12, 10
+    .byte repeatTile $CC, 19
+
+    ;Nintendo
+    .byte 1,1
+    .byte $E3,$E4,$E5,$E6,$E7,$E8
+
+    ;presented by
+    .byte set_pos 12, 15
+    .byte $D9,$DA,$DB,$DC,$DD,$DE,$CE,$CF
+    ;tail of p
+    .byte 1
+    .byte $D8
+    ;tail of y
+    .byte set_pos 19, 16
+    .byte $DF
+
+    ;line
+    .byte set_pos 0, 17
+    .byte repeatTile $CC, 21
+
+    ;SHIGESATO ITOI
+    .byte set_pos 7, 19
+    .byte $F3,$F4,$F5,$F6,$F7,$F8,$F9,$FA,$FB,$FC,$FD,$FE,$FF
+    .byte 0
+
+; $9EEA - presented by SHIGESATO ITOI
+presented_by_tiles:
+    ;hacked by
+    .byte set_pos 12, 8
+    .byte $f2,$8c,$9b,$cd,$8d,$ce,$cf
+
+    ;tail
+    .byte set_pos 18, 9
+    .byte $df
+
+    ;line
+    .byte set_pos 0, 10
+    .byte repeatTile $CC, 20
+
+    ;nathan r
+    .byte set_pos 7, 12
+    .byte $9f,$86,$87,$88,$86,$9f,$89,$8a
+
+
+    ;in association with
+    .byte set_pos 12, 15
+    .byte $90,$91,$92,$c9,$93,$94,$95,$96,$97,$98,$99
+
+    ;line
+    .byte 1, 1
+    .byte repeatTile $CC, 20
+
+    ;pk hack
+    .byte 1,1
+    .byte $9a,$ab,$ac,$ad
+    .byte set_pos 11, 20
+    .byte $ae,$af,$bb,$a6,$a7,$a8,$a9,$aa,$b0,$b1,$b2,$b3,$b4
+    .byte 1
+    .byte $b5,$b6,$b7,$b8,$b9,$ba,$c0,$c1,$c2,$d0,$d1,$d2,$e0
+    .byte 1
+    .byte $e1,$e2,$f0,$f1
+    .byte 0
+
+; $9F18 - title screen
+title_screen_tiles:
+    ;HACKY
+    .byte set_pos 7, 4
+    .byte $80,$81,$82,$80,$83
+    .byte 1
+    .byte $80,$84,$80,$85,$86,$87,$88,$80,$89,$8A,$80,$8B,$80,$80,$8C
+    .byte 1
+    .byte $8d,$8e,$8a,$90,$80,$91,$92,$93,$94,$95,$80,$96,$80,$80,$97,$98,$99,$9a
+    .byte 1
+    .byte $9b,$9c,$9d,$9e,$9f,$a0,$a1,$a2,$a3,$80,$a4,$a5,$a6,$a7,$a8,$a9,$aa,$ab
+    .byte 1
+    .byte $ac,$80,$ad,$ae,$af,$b0,$b1,$b2,$b3,$80,$b4,$b5,$8a,$80,$b6,$b7
+    .byte 1
+    .byte $b8,$80,$b9,$ba,$bb,$80,$bc,$bd,$be,$80,$bf,$c0,$c1,$80,$c2
+    .byte set_pos 14, 10
+    .byte $c3,$c4,$c5,$80,$80,$80,$c6,$c7
+
+    ;HALL
+    .byte set_pos 4, 12
+    .byte $c8,$c9,$ca,$cb,$cc,$cd,$80,$cd,$80
+    .byte 1
+    .byte $d6,$d7,$d8,$d9,$da,$db,$80,$db,$80
+    .byte 1
+    .byte $e3,$e4,$e5,$e6,$e7,$e8,$e9,$e8,$e9
+    .byte 1
+    .byte $f3,$f4,$f5,$f6,$80,$f7,$f8,$f7,$f8
+    .byte 1
+
+    ;WEEN
+    .byte set_pos 17, 12
+    .byte $ce,$cf,$80,$d0,$d1,$d2,$d1,$d2,$80,$d3,$d4,$d5
+    .byte set_pos 18, 13 ;so we can 1
+    .byte $dc,$cd,$dd,$de,$df,$de,$df,$80,$e0,$e1,$e2
+    .byte 1
+    .byte $ea,$eb,$ec,$ed,$ee,$ed,$ee,$ef,$f0,$f1,$f2
+    .byte 1
+    .byte $f9,$fa,$80,$fb,$fc,$fb,$fc,$fd,$fe,$ff
+    .byte 1
+
+    ;c 1989/1990
+    ;SHIGESATO ITOI / NINTENDO
+    .byte set_pos 7, 23
+    .byte $43,$44,$45,$46,$47,$0B
+    .byte $69,$6A,$6B,$6C,$6D,$6E,$6F,$53,$54,$55,$56,$57
+    .byte 0

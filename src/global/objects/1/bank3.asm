@@ -147,12 +147,12 @@ objectDef OBJ_TYPE::DOOR, $3a, DIRECTIONS::RIGHT, $ba
 doorArgDef 7, $1e, DIRECTIONS::LEFT, $b7
 
 OBJ_NKR_PRESENT1:
-objectDef $20, $32, 0, $cd
+objectDef OBJ_TYPE::PRESENT, $32, DIRECTIONS::UP, $cd
 .addr SPRITEDEF_PRESENT ;sprite
 .byte 34 ;item
 .byte $ec ;flag
 OBJ_NKR_PRESENT2:
-objectDef $20, $3a, 0, $c4
+objectDef OBJ_TYPE::PRESENT, $3a, DIRECTIONS::UP, $c4
 .addr SPRITEDEF_PRESENT ;sprite
 .byte 38 ;item
 .byte $eb ;flag
@@ -165,12 +165,12 @@ objectDef OBJ_TYPE::DOOR, $22, DIRECTIONS::RIGHT, $d2
 doorArgDef 7, $2e, DIRECTIONS::RIGHT, $c6
 
 OBJ_NKR_PRESENT3:
-objectDef $20, $18, 0, $d2
+objectDef OBJ_TYPE::PRESENT, $18, DIRECTIONS::UP, $d2
 .addr SPRITEDEF_PRESENT ;sprite
 .byte 37 ;item
 .byte $ea ;flag
 OBJ_NKR_PRESENT4:
-objectDef $20, $10, 0, $df
+objectDef OBJ_TYPE::PRESENT, $10, DIRECTIONS::UP, $df
 .addr SPRITEDEF_PRESENT ;sprite
 .byte 40 ;item
 .byte $e9 ;flag
@@ -196,7 +196,7 @@ OBJ_STOP
 OBJ_DIALOGUE UMSG::CANARY_MAN_BABY_YES
 OBJ_YESNO_IS_NO @no-OBJ_NKR_BOSS
 OBJ_DIALOGUE UMSG::CANARY_MAN_MELODY_NO
-OBJ_BATTLE (BATTLE_NKRSMONST-BATTLES_START)/$A
+OBJ_BATTLE BATTLEID BATTLE_NKRSMONST
 OBJ_SET_FLAG $f6
 OBJ_SUBROUTINE obj_bossfinisher_subr, 0
 OBJ_STOP

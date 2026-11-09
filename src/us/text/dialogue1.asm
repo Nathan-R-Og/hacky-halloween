@@ -110,9 +110,11 @@ MSG_MYHOME_PHONE:
 MSG_PHONE_END:
 .byte   "*Slam.",newLine
 .byte   stopText
+
 MSG_PHONE_INTRO:
 .byte   "*This is your Dad.",newLine
 .byte   stopText
+
 MSG_PHONE_NEWMONEY:
 .byte   "*I've psychically",newLine
 .byte   " given you $",cashDeposit,newLine
@@ -129,21 +131,25 @@ MSG_PHONE_NEWMONEY:
 .byte   "*Use your candy",newLine
 .byte   " wisely.",newLine
 .byte   stopText
+
 MSG_PHONE_RESETPROMPT:
 .byte   "*Now son, it's not",newLine
 .byte   " my business, but",newLine
 .byte   " why not rest?",newLine
 .byte   stopText
+
 MSG_PHONE_SAVE_YES:
 .byte   "*I see. ",newLine
 .byte   " I'll SAVE your",newLine
 .byte   " progress.",newLine
 .byte   stopText
+
 MSG_PHONE_SAVE_NO:
 .byte   "*I see.",newLine
 .byte   " I know, Podunk",newLine
 .byte   " faces a crisis.",newLine
 .byte   stopText
+
 MSG_PHONE_SAVED_RESETPROMPT:
 .byte   "*OK...But, I was",newLine
 .byte   " thinking of going",newLine
@@ -154,6 +160,7 @@ MSG_PHONE_SAVED_RESETPROMPT:
 .byte   pauseText
 .byte   "*Good night.",newLine
 .byte   stopText
+
 MSG_PHONE_RESET_YES:
 .byte   "*See you later!",newLine
 .byte   pauseText
@@ -163,6 +170,7 @@ MSG_PHONE_RESET_YES:
 .byte   "*while turning the",newLine
 .byte   " POWER off. OK?",newLine
 .byte   stopText
+
 MSG_PHONE_RESET_NO:
 .byte   "*Just like your",newLine
 .byte   " Mom, you never",newLine
@@ -171,10 +179,12 @@ MSG_PHONE_RESET_NO:
 .byte   "*Please don't push",newLine
 .byte   " yourself so hard.",newLine
 .byte   stopText
+
 MSG_PHONE_SAVEPROMPT:
 .byte   "*By the way, do",newLine
 .byte   " you want to SAVE?",newLine
 .byte   stopText
+
 MSG_PHONE_GOODLUCK:
 .byte   "*Good luck.",newLine
 .byte   stopText
@@ -399,6 +409,27 @@ MSG_PODUNK_BREADGIRL:
 .byte   "*WRONG!!!",newLine
 .byte   stopText
 
+MSG_MAYOR_HELPTOWN:
+MSG_MAYOR_PIPPIQUEST:
+MSG_MAYOR_PIPPIQUESTYES:
+MSG_MAYOR_RETURNPIPPI:
+MSG_MAYOR_SEE_ZOO:
+MSG_MAYOR_SEE_ZOO_ACCEPT:
+MSG_ABBOTT_GET_KEY:
+MSG_MAYOR_HERO:
+MSG_MAYOR_POST_ZOO:
+MSG_SECRETARY_ANA:
+MSG_ABBOTT_NEWKEY:
+MSG_PETVENDOR_INTRO:
+MSG_PETVENDOR_INTRO2:
+MSG_PETVENDOR_PITCH:
+MSG_PETVENDOR_DECLINE:
+MSG_PETVENDOR_ACCEPTPITCH:
+MSG_PETVENDOR_DECLINEPITCH:
+MSG_PETVENDOR_CANARYCHECK:
+MSG_PETVENDOR2_BRAINWASH:
+MSG_PETVENDOR2_CUTEPETS:
+
 MSG_PODUNK_PIPPI_MEET_NOYES:
 .byte   "*Hmmm.",newLine
 .byte   stopText
@@ -409,11 +440,16 @@ MSG_TWINKLE_LLOYDBULLY2_LLOYD:
 .byte   " the game?",newLine
 .byte   stopText
 
+MSG_RETURNS_INTRO:
+
 MSG_REINDEER_DRAGONGIRL_CHECK:
 .byte   "*How many party",newLine
 .byte   " members can you",newLine
 .byte   " have at once?",newLine
 .byte   stopText
+
+MSG_RETURNS_DECLINE:
+MSG_RETURNS_ACCEPT:
 
 MSG_PODUNK_CASHCARDWOMAN:
 .byte   "*What question number",newLine
@@ -508,7 +544,43 @@ MSG_PODUNK_PIPPI_MEET_NO:
 .byte   " TIME I GET A CHANCE.",newLine
 .byte   stopText
 
+MSG_PODUNK_MAYORPIPPI:
+MSG_PODUNK_MAYORPIPPI_YES:
+
 MSG_ZOO_GATEMONKEY:
 .byte   "*WITNESS THE POWER",newLine
 .byte   " OF REINCARNATION!",newLine
 .byte   stopText
+
+MSG_MAGICAVE_SHELLQUESTION:
+MSG_MAGICANT_CLOTHINGMAN:
+MSG_MAGICANT_NICKNAMEMAN:
+MSG_MAGICANT_NICKNAMEMAN_YES:
+MSG_MAGICANT_NICKNAMEMAN_NO:
+MSG_MAGICANT_NICKNAMEMAN_AFTER:
+MSG_MAGICANT_NICKNAMEMAN_AFTER_YES:
+MSG_TRAIN_DECLINE:
+MSG_MAGICANT_NICKNAMEMAN_QUEST:
+MSG_MAGICANT_PHILOSOPHYMAN:
+MSG_MAGICANT_PHILOSOPHYMAN_YES:
+MSG_MAGICANT_PHILOSOPHYMAN_NO:
+MSG_MAGICANT_CANNOTPARTMAN:
+MSG_MAGICANT_CANNOTPARTMAN_YES:
+MSG_MAGICANT_CANNOTPARTMAN_NO:
+MSG_MAGICANT_STRENGTHMAN:
+MSG_110:
+MSG_MAGICANT_EARRINGGIRL:
+MSG_MAGICANT_FOUNTAINMAN:
+MSG_MAGICANT_RESTROOMBOY:
+MSG_MAGICANT_INNBOY:
+MSG_MAGICANT_INNBOY_YES:
+MSG_MAGICANT_INNBOY_NO:
+MSG_MAGICANT_STRANGEGIRL:
+MSG_MAGICANT_INNBOY_STAY:
+MSG_MAGICANT_INNBOY_NOSTAY:
+MSG_MAGICANT_INNKEEPER1:
+MSG_MAGICANT_INNKEEPER1_NO:
+MSG_MAGICANT_INNKEEPER2:
+MSG_MAGICANT_MUSICVENDOR:
+MSG_MAGICANT_INNKEEPER2_NO:
+MSG_MAGICANT_INNKEEPER3:

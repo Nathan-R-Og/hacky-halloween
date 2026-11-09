@@ -1,9 +1,19 @@
 .segment        "CHR0": absolute
-    .incbin "../../split/us/graphics/tileset1.bin"
-    .incbin "../../split/us/graphics/tileset2.bin"
-    .incbin "../../split/us/graphics/tileset3.bin"
-    .incbin "../../split/us/graphics/tileset4.bin"
-    .incbin "../../split/us/graphics/tileset5.bin"
-    .incbin "../../split/us/graphics/tileset6.bin"
-    .incbin "../../split/us/graphics/tileset7.bin"
+    ;map gfx 1
+    .incbin "../../split/global/chr/tileset1.bin"
+
+    ;the steeple was changed to remove the cross
+    ;4 tiles
+    .ifdef VER_JP
+        .incbin "../../split/jp/chr/tileset2.bin"
+    .else
+        .incbin "../../split/us/chr/tileset2.bin"
+    .endif
+
+    .incbin "../../split/global/chr/tileset3.bin"
+    .incbin "../../split/global/chr/tileset4.bin"
+    .incbin "../../split/global/chr/tileset5.bin"
+    .incbin "../../split/global/chr/tileset6.bin"
+    .incbin "../../split/global/chr/tileset7.bin"
+
     .incbin "../../edit/tileset8.bin"

@@ -8,4 +8,3 @@
     .incbin "../../edit/bgfx/5.bin"
     .incbin "../../edit/bgfx/6.bin"
     .incbin "../../edit/bgfx/7.bin"
-

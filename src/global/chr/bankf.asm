@@ -26,16 +26,16 @@ rts_1:
     rts
 
 ns_load_ui_element:
-    lda B25_1873, x
+    lda NS_UiPointers, x
     sta $74
-    lda B25_1873+1, x
+    lda NS_UiPointers+1, x
     sta $75
     rts
 
-rts_3:
-    lda B25_1885, x
+ns_load_choicer:
+    lda NS_ChoicerPointers, x
     sta $80
-    lda B25_1885+1, x
+    lda NS_ChoicerPointers+1, x
     sta $81
     rts
 
@@ -88,7 +88,7 @@ SetupFreshSaveData:
     sta $7402
     rts
 
-B25_1873:
+NS_UiPointers:
     .word ui_save_slot_1
     .word ui_empty_slot_1
     .word ui_save_slot_2
@@ -99,7 +99,7 @@ B25_1873:
     .word ui_delete_save
     .word ui_copy_save
 
-B25_1885:
+NS_ChoicerPointers:
     .word B25_19f0
     .word B25_19f0
     .word B25_19f0
@@ -410,19 +410,19 @@ B25_1ab5:
 ;character name stuff
 NS_QuestionSetups:
     ;ninten
-    .addr SPRITEDEF_NINTENDOWN1
+    .addr SPRITEDEF_NINTEN+16
     .addr NintenQuestion
     .addr Ninten_Data+party_info::name
     ;ana
-    .addr SPRITEDEF_C
+    .addr SPRITEDEF_ANA+16
     .addr AnaQuestion
     .addr Ana_Data+party_info::name
     ;lloyd
-    .addr SPRITEDEF_14
+    .addr SPRITEDEF_LLOYD+16
     .addr LloydQuestion
     .addr Lloyd_Data+party_info::name
     ;teddy
-    .addr SPRITEDEF_1C
+    .addr SPRITEDEF_TEDDY+16
     .addr TeddyQuestion
     .addr Teddy_Data+party_info::name
     ;food
@@ -568,4 +568,8 @@ finalChoicers:
 
 .segment        "CHRF_2": absolute
 ;text gfx
-.incbin "../../edit/ui.bin"
+.ifdef VER_JP
+    .incbin "../../split/jp/chr/ui.bin"
+.else
+    .incbin "../../edit/ui.bin"
+.endif

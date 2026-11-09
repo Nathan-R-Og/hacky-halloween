@@ -151,14 +151,14 @@ Note_B 5 ;$62
 Note_Length nl_half
 Note_D 6 ;$68
 
-Set_NLT NLT18-Tempo_Lengths
+Set_NLT NLT_18-Tempo_Lengths
 Note_Length nl_quarter
 Note_Rest
 Note_G 5 ;$62
 Note_Length nl_half
 Note_B 5 ;$68
 
-Set_NLT NLTC-Tempo_Lengths
+Set_NLT NLT_0C-Tempo_Lengths
 Note_Length nl_quarter
 Note_Rest
 Note_E 5 ;$62
@@ -276,10 +276,10 @@ Note_E 4+1 ;54
 
 Note_Length nl_whole
 Note_G 4+1 ;5a
-Set_NLT NLT18-Tempo_Lengths
+Set_NLT NLT_18-Tempo_Lengths
 Note_Length nl_whole
 Note_F 4+1 ;58
-Set_NLT NLTC-Tempo_Lengths
+Set_NLT NLT_0C-Tempo_Lengths
 Note_Length nl_whole
 Note_D 4+1 ;56
 Note_F 4+1 ;54
@@ -319,16 +319,16 @@ B29_1C3F:
 Note_Repeat 7
 
 Note_Length nl_half
-Note_Noise 0, 1
+Noise_Rest
 Note_Noise 0, 4
 Note_End_Repeat
 
 Note_Length nl_eighth
 Note_Noise 0, 4
-Note_Noise 0, 1
+Noise_Rest
 Note_Length nl_eighth
 Note_Noise 0, 4
-Note_Noise 0, 1
+Noise_Rest
 
 Note_Length nl_eighth
 Note_Noise 1, 0
@@ -344,8 +344,8 @@ Track_End
 mus_mother_earth_looper:
 Note_Length nl_eighth
 Note_Noise 2, 1
-Note_Noise 0, 1
+Noise_Rest
 Note_Noise 1, 1
-Note_Noise 0, 1
+Noise_Rest
 
 Track_End

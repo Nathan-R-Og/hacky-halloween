@@ -1,7 +1,7 @@
 .segment        "CHR1A": absolute
     ;ending scenes gfx
     .incbin "../../edit/credits_characters1.bin"
-    .incbin "../../split/us/credits_characters2.bin"
+    .incbin "../../split/us/chr/credits_characters2.bin"
 
     .incbin "../../edit/heese_gfx.bin"
 

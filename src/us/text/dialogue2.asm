@@ -1,5 +1,31 @@
 .segment        "CHR11": absolute
 
+MSG_MAGICANT_INNBOY_AGAINNO:
+MSG_MAGICANT_STRANGERBOY:
+MSG_MAGICANT_OCARINAMAN:
+MSG_MAGICANT_OCARINAMAN_YES:
+MSG_MAGICANT_OCARINAMAN_NO:
+MSG_MAGICANT_OCARINAMAN_AFTER:
+MSG_MAGICANT_NOEXITBOY:
+MSG_MAGICANT_OUTSIDEMAN:
+MSG_MAGICANT_HOLEGIRL:
+MSG_MAGICANT_GOODSKEEPER:
+MSG_MAGICANT_MIMICKER:
+MSG_MAGICANT_HOLEMAN:
+MSG_MAGICANT_REDWEEDGIRL:
+MSG_MAGICANT_BIGBAGGUY_ASK:
+MSG_MAGICANT_BIGBAGGUY_CARD:
+MSG_MAGICANT_BIGBAGGUY_ASK_NO:
+MSG_MAGICANT_BIGBAGGUY_RETURN2:
+MSG_MAGICANT_BIGBAGGUY_CARD_NO:
+MSG_MAGICANT_BIGBAGGUY_RETURN1:
+MSG_MAGICANT_SICKNESSGUY:
+MSG_MAGICANT_GUARD1:
+MSG_MAGICANT_GUARD2:
+MSG_MAGICANT_GUARD_BYE:
+MSG_MAGICANT_QUEENGUY:
+MSG_MAGICANT_GUITARIST_UNDER:
+
 MSG_MTITOI_HEALERFAIL:
 .byte   "*Hey kid! I was hired",newLine
 .byte   " here to help you.",newLine
@@ -17,38 +43,57 @@ MSG_MAGICANT_GUITARMAN_SONG:
 .byte   " rejuvinated.",newLine
 .byte   stopText
 
+MSG_MAGICANT_GUITARGIRL:
+MSG_MAGICANT_FORGOTTENMANGIRL:
+
 MSG_HEALER:
 .byte   "  Shop     Heal"
 .byte   stopText
+
+MSG_MAGICANT_BENEVOLENTOLDMAN_TOOMUCH:
+MSG_MAGICANT_NORMALMONKEY:
+MSG_MAGICANT_NORMALMONKEY_YES:
+MSG_MAGICANT_NORMALMONKEY_NO:
 
 MSG_MERRYSVILLE_TRAINWOMAN:
 .byte   "*You have too",newLine
 .byte   " much!",newLine
 .byte   stopText
 
+MSG_MAGICANT_MARYGIRL:
+MSG_MAGICANT_NIGHTMAREGUY:
+MSG_MAGICANT_ANACAT_GIRLS:
 MSG_MTITOI_TEDDY_SLEEP:
 .byte   "*HO HO HO!",newLine
 .byte   pauseText
 .byte   "*EVIL HOLIDAYS!!",newLine
 .byte   stopText
 
+MSG_MAGICANT_LOVEGUY_ONYXHOOK:
+MSG_MAGICANT_LOVEGUY:
+MSG_MAGICANT_MARIA:
+
 MSG_CANARY_GENERIC:
 .byte   "*Is this even legal?",newLine
 .byte   stopText
 
+MSG_MAGICANT_MARIA1:
 .byte   "*Please SING to me",newLine
 .byte   " the melodies that",newLine
 .byte   " you have learned.",newLine
 .byte   stopText
 
+MSG_MAGICANT_MARIA2:
 .byte   "*Yes...",newLine
 .byte   " that's right.",newLine
 .byte   " That is the song.",newLine
 .byte   stopText
 
+MSG_MAGICANT_MARIA3:
 .byte   "*Oh! Giegue!",newLine
 .byte   stopText
 
+MSG_MAGICANT_VANISHGIRL:
 .byte   "*In a bad dream,",newLine
 .byte   " Magicant vanished",newLine
 .byte   " into thin air.",newLine
@@ -57,6 +102,7 @@ MSG_CANARY_GENERIC:
 .byte   " pounding so hard.",newLine
 .byte   stopText
 
+MSG_MAGICANT_ANACAT1:
 .byte   "*Yes, I am the cat",newLine
 .byte   " who swims on the",newLine
 .byte   " ground.",newLine
@@ -65,6 +111,7 @@ MSG_CANARY_GENERIC:
 .byte   " my hand.",newLine
 .byte   stopText
 
+MSG_MAGICANT_ANACAT2:
 .byte   "*Do you know what I",newLine
 .byte   " have in my hand?",newLine
 .byte   pauseText
@@ -76,10 +123,12 @@ MSG_CANARY_GENERIC:
 .byte   " strength...",newLine
 .byte   stopText
 
+MSG_MAGICANT_ANACAT3:
 .byte   "*Magic Ribbons are",newLine
 .byte   " only for girls.",newLine
 .byte   stopText
 
+MSG_MAGICANT_LLOYDCAT:
 .byte   "*I am a Swimming",newLine
 .byte   " cat.",newLine
 .byte   pauseText
@@ -91,20 +140,24 @@ MSG_CANARY_GENERIC:
 .byte   " helpless child?",newLine
 .byte   stopText
 
+MSG_MAGICANT_LLOYDCAT_NOLLOYD:
 .byte   "*I see, but you are",newLine
 .byte   " not helpless, so",newLine
 .byte   " you don't need it.",newLine
 .byte   stopText
 
+MSG_MAGICANT_LLOYDCAT_NO:
 .byte   "*The boy with",newLine
 .byte   " glasses can surely",newLine
 .byte   " use the Candy.",newLine
 .byte   stopText
 
+MSG_MAGICANT_LLOYDCAT_AFTER:
 .byte   "*Was the Candy",newLine
 .byte   " good?",newLine
 .byte   stopText
 
+MSG_MAGICANT_BENEVOLENTBOY:
 .byte   "*If you need the",newLine
 .byte   " benevolent",newLine
 .byte   " old man,",newLine
@@ -132,22 +185,27 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " a hat on!",newLine
 .byte   stopText
 
+MSG_MCAVE_QUICKMONKEY_CAUGHT:
 .byte   "*Did you call me",newLine
 .byte   " up?",newLine
 .byte   stopText
 
+MSG_MAGICANT_BENEVOLENTOLDMAN_NO:
 .byte   "*Is that right?",newLine
 .byte   " Bye!",newLine
 .byte   stopText
 
+MSG_MAGICANT_BENEVOLENTOLDMAN_YES:
 .byte   "*You need money,",newLine
 .byte   " don't you?",newLine
 .byte   stopText
 
+MSG_MAGICANT_BIGBAGGUY_AFTER:
 .byte   "*Has it been helpful",newLine
 .byte   " to you?",newLine
 .byte   stopText
 
+MSG_MAGICANT_BENEVOLENTOLDMAN_MONEY:
 .byte   "*Well, your balance",newLine
 .byte   " is $",currentCash,".",newLine
 .byte   pauseText
@@ -155,15 +213,18 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " want to withdraw?",newLine
 .byte   stopText
 
+MSG_MAGICANT_BENEVOLENTOLDMAN_GIVE:
 .byte   "*Here...",newLine
 .byte   " Take it with you.",newLine
 .byte   stopText
 
+MSG_MAGICANT_BENEVOLENTOLDMAN_NOTENOUGH:
 .byte   "*Ouch, there is not",newLine
 .byte   " that much money left",newLine
 .byte   " in your account.",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN1:
 .byte   "*I am a forgotten",newLine
 .byte   " man. I'm not",newLine
 .byte   " really here.",newLine
@@ -174,6 +235,7 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   "*Please ignore me.",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN2:
 .byte   "*I am a man who",newLine
 .byte   " does not exist.",newLine
 .byte   pauseText
@@ -186,6 +248,7 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " alone anymore.",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN3:
 .byte   "*My conversation",newLine
 .byte   " is always a",newLine
 .byte   " monologue.",newLine
@@ -195,6 +258,7 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " I was born...",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN4:
 .byte   "*Lucky, unlucky...",newLine
 .byte   " It makes no",newLine
 .byte   " difference to me.",newLine
@@ -204,6 +268,7 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " too much.",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN5:
 .byte   "*Why do you insist",newLine
 .byte   " on talking to me?",newLine
 .byte   pauseText
@@ -212,11 +277,13 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " man, too?",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN5_YES:
 .byte   "*Don't give me that",newLine
 .byte   " garbage. Just",newLine
 .byte   " leave me alone.",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN6:
 .byte   "*That's right.",newLine
 .byte   " That is right,",newLine
 .byte   " right?",newLine
@@ -226,10 +293,12 @@ MSG_ELLAY_LHBOUNCERGUY_STONE:
 .byte   " else.",newLine
 .byte   stopText
 
+MSG_MAGICANT_FORGOTTENMAN7:
 .byte   "*That's right.",newLine
 .byte   " Thank you.",newLine
 .byte   stopText
 
+MSG_MAGICANT_BIGBAGGUY_NOROOM2:
 .byte   "*Your load is too",newLine
 .byte   " great for more.",newLine
 .byte   " Why not come back?",newLine
@@ -391,6 +460,7 @@ MSG_TWINKLE_LLOYDBULLY2:
 .byte   "*Just teasing.",newLine
 .byte   stopText
 
+MSG_TWINKLE_LLOYDEXPLOSIVES:
 .byte   "*I saw ",lloydName,newLine
 .byte   " steal explosives!!",newLine
 .byte   pauseText
@@ -399,25 +469,30 @@ MSG_TWINKLE_LLOYDBULLY2:
 .byte   " say.",newLine
 .byte   stopText
 
+MSG_TWINKLE_GLASSESSLIPPED:
 .byte   "*Your glasses have",newLine
 .byte   " slipped off your",newLine
 .byte   " nose.",newLine
 .byte   stopText
 
+MSG_TWINKLE_SUZY:
 .byte   "*I am Suzy. I'm",newLine
 .byte   " Miss Merrysville.",newLine
 .byte   pauseText
 .byte   "*Aren't I gorgeous?",newLine
 .byte   stopText
 
+MSG_TWINKLE_SUZY_YES:
 .byte   "*You look cute too.",newLine
 .byte   stopText
 
+MSG_TWINKLE_SUZY_NO:
 .byte   "*You are ugly!",newLine
 .byte   " You remind me of a",newLine
 .byte   " noodlenoggin!",newLine
 .byte   stopText
 
+MSG_TWINKLE_GAMEBOYKID:
 .byte   "*It's too bad that",newLine
 .byte   " the door to the",newLine
 .byte   " roof is locked.",newLine
@@ -430,6 +505,7 @@ MSG_TWINKLE_LLOYDBULLY2:
 .byte   " with my Game Boy.",newLine
 .byte   stopText
 
+MSG_TWINKLE_GAMEBOYKID2:
 .byte   "*You don't talk",newLine
 .byte   " very much, do you?",newLine
 .byte   stopText

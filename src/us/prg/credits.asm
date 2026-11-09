@@ -1,23 +1,32 @@
 .segment        "CREDITS": absolute
 
+.define loop_count UNK_47
+
 Credits_Entry:
+    ;do fade out
     jsr credits_cmd_fade_out
 
+    ;wait a frame
     jsr PpuSync
 
+    ;horizontal tables
     lda #0
     sta MIRROR
 
+    ;irq_count = 0
     lda #0
-    sta UNK_EC
+    sta irq_count
 
+    ; disable camera shaking
     lda UNK_E7
-    and #%10111111
+    and #~$40
     sta UNK_E7
 
+    ;shift_x = 0
+    ;shift_y = 0
     lda #0
-    sta UNK_E8
-    sta UNK_E9
+    sta shift_x
+    sta shift_y
 
     ;reset Base nametable address
     lda ram_PPUCTRL
@@ -25,14 +34,15 @@ Credits_Entry:
     ldx #$10
     ldy #8
     sta ram_PPUCTRL
-    stx scroll_y
-    sty scroll_x
+    stx scroll_x
+    sty scroll_y
 
-    ;clear music?
+    ;clear music
     lda #$ff
     jsr PlayMusic
 
-    jsr WaitFrame
+    ;wait for nmi
+    jsr WaitNMI
 
     ;load pointer
     lda #.LOBYTE(Credits_Script)
@@ -40,7 +50,7 @@ Credits_Entry:
     lda #.HIBYTE(Credits_Script)
     sta UNK_40+1
 
-    @B26_0042:
+    @eval_loop:
 
     ;if byte == 0, loop
     ldy #0
@@ -48,37 +58,47 @@ Credits_Entry:
     beq force_loop
 
     jsr do_credits_eval
+
+    ;UNK_40 += y index
     clc
     tya
     adc UNK_40
     sta UNK_40
-    lda #$00
+    lda #0
     adc UNK_40+1
     sta UNK_40+1
-    jmp @B26_0042
+
+    jmp @eval_loop
 
     force_loop:
     jmp start_game_real
 
 Credits_Entry_2:
+    ;wait 120 frames
     ldx #120
     jsr WaitXFrames_Min1
 
+    ;wait a frame
     jsr PpuSync
 
+    ;vertical tables
     lda #1
     sta MIRROR
 
+    ;irq_count = 0
     lda #0
-    sta UNK_EC
+    sta irq_count
 
+    ; disable camera shaking
     lda UNK_E7
-    and #%10111111
+    and #~$40
     sta UNK_E7
 
+    ;shift_x = 0
+    ;shift_y = 0
     lda #0
-    sta UNK_E8
-    sta UNK_E9
+    sta shift_x
+    sta shift_y
 
     ;reset Base nametable address
     lda ram_PPUCTRL
@@ -86,14 +106,15 @@ Credits_Entry_2:
     ldx #0
     ldy #$C0
     sta ram_PPUCTRL
-    stx scroll_y
-    sty scroll_x
+    stx scroll_x
+    sty scroll_y
 
-    ;clear music?
+    ;clear music
     lda #$ff
     jsr PlayMusic
 
-    jsr WaitFrame
+    ;wait for nmi
+    jsr WaitNMI
 
     ;load pointer
     lda #.LOBYTE(ActualCredits_Script)
@@ -101,7 +122,7 @@ Credits_Entry_2:
     lda #.HIBYTE(ActualCredits_Script)
     sta UNK_40+1
 
-    @B26_0042:
+    @eval_loop:
 
     ;if byte == 0, loop
     ldy #0
@@ -109,14 +130,17 @@ Credits_Entry_2:
     beq @force_loop
 
     jsr do_credits_eval
+
+    ;UNK_40 += y index
     clc
     tya
     adc UNK_40
     sta UNK_40
-    lda #$00
+    lda #0
     adc UNK_40+1
     sta UNK_40+1
-    jmp @B26_0042
+
+    jmp @eval_loop
 
     @force_loop:
     jmp @force_loop
@@ -145,7 +169,7 @@ credits_lut:
     .addr credits_cmd_unk8-1 ; [08 XXXX]                 - Unconditional jump
     .addr credits_cmd_init_sprite-1 ; [09 AA BB CC DD EE FF GG] - Init "Sprite" object
     .addr credits_cmd_move_sprite-1 ; [0A AA BB CC DD EE]       - Edit "Sprite" object
-    .addr credits_cmd_play_sfx-1 ; [0B XX]                   - Play music XX? Sfx? idk
+    .addr credits_cmd_play_mus-1 ; [0B XX]                   - Play music XX
     .addr credits_cmd_load_secondarytilesets-1 ; [0C XX]                   - CHR bankswitch (R1)
     .addr credits_cmd_set_alltilesets-1 ; [0D AA BB CC DD EE FF]    - CHR bankswitch (R4, R5, R2, R3, R0, R1)
     .addr credits_cmd_begin_loop-1 ; [0E XX]                   - Set $47 loop variable
@@ -155,6 +179,10 @@ credits_lut:
     .addr credits_cmd_draw_text_xy-1 ; [12 AA BB CC DD]          - Display text with a position
     .addr credits_cmd_fade_in-1 ; [13]                      - Fades in
     .addr credits_cmd_delay_real-1 ; [14]                      - Fades in
+
+.define ENDING_CMD_00_END .byte 0
+
+.define ENDING_CMD_01_DELAY(frames) .byte 1, frames
 
 credits_cmd_delay:
     ;get next byte
@@ -172,7 +200,7 @@ credits_cmd_delay:
 
     jsr PpuSync
     lda #1
-    sta UNK_E5
+    sta new_animation_timer
     dex
     bne @loop
 
@@ -191,6 +219,8 @@ credits_cmd_delay:
 
     rts
 
+.define ENDING_CMD_14_DELAYREAL(frames) .byte $14, frames
+
 credits_cmd_delay_real:
     ;get next byte
     iny
@@ -201,11 +231,9 @@ credits_cmd_delay_real:
 
     ;do ppu syncs until x == 0
     @loop:
-
-
     jsr PpuSync
     lda #1
-    sta UNK_E5
+    sta new_animation_timer
     dex
     bne @loop
 
@@ -215,31 +243,42 @@ credits_cmd_delay_real:
     ;bye
     rts
 
+.define ENDING_CMD_02(arg1) .byte 2, arg1
+
 ;wait until button pressed?
 credits_cmd_unk2:
     ;get next byte
     iny
-    lda scroll_x
+    lda scroll_y
 
     sbc (UNK_40), y
     ;reset Base nametable address
-    sta scroll_x
+    sta scroll_y
 
     iny
 
     ;bye
     rts
 
+.define ENDING_CMD_03_FADEOUT .byte 3
+
 credits_cmd_fade_out:
     jsr OT0_DefaultTransition
-    jsr B31_1d5e
-    jsr B31_1d80
+    jsr ClearSprites
+    jsr ClearTilemaps
 
     ;set y to after this
     ldy #1
 
     ;bye
     rts
+
+.macro ENDING_CMD_0D_SETALLTILESETS arg1, arg2, arg3, arg4, arg5, arg6
+    .byte $D
+    .byte arg1, arg2
+    .byte arg3, arg4
+    .byte arg5, arg6
+.endmacro
 
 credits_cmd_set_alltilesets:
     ;get next byte
@@ -258,6 +297,16 @@ credits_cmd_set_alltilesets:
     ldx #BANK::CHR1C00
     jsr BANK_SWAP
     ;fallthrough
+
+.macro ENDING_CMD_04_LOADTILESETS arg1, arg2, arg3, arg4
+    .byte 4
+    .byte arg1
+    .byte arg2
+    .byte arg3
+    .byte arg4
+.endmacro
+
+.define ENDING_CMD_0C_LOADSECONDARYSPRITETILES(arg1) .byte $C, arg1
 
 credits_cmd_load_tilesets:
     ;get next byte
@@ -299,59 +348,96 @@ credits_cmd_load_tilesets:
     ;byte
     rts
 
+.macro ENDING_CMD_05_LOADBG2MAP arg1, arg2, arg3
+    .byte 5
+    .addr arg1
+    .byte arg2, arg3
+.endmacro
+
+.macro ENDING_CMD_06_SETMETATILEPROPERTIES arg1, arg2, arg3
+    .byte 6
+    .addr arg1
+    .byte arg2, arg3
+.endmacro
+
+.define height UNK_42
+
 credits_cmd_set_metatileprops:
-    lda #$08
-    bne B26_00f5
+    lda #8
+    bne unconditional_funny
     credits_cmd_load_bg2map:
     lda #$20
-    B26_00f5:
+    unconditional_funny:
     sta UNK_43
     jsr PpuSync
-    lda #$05
+
+    lda #NMI_COMMANDS::PPU_WRITE
     sta nmi_queue ; TODO: UNKNOWN NMI COMMAND
-    ldy #$04
+
+    ;height = UNK_40[y]
+    ldy #4
     lda (UNK_40), y
-    sta UNK_42
+    sta height
+
+    ;count
     dey
     lda (UNK_40), y
     sta nmi_queue+1
+
+    ;write-to pointer
     dey
     lda (UNK_40), y
     sta nmi_queue+2
     dey
     lda (UNK_40), y
     sta nmi_queue+3
-    ldy #$05
-    B26_0119:
-    ldx #$00
-    B26_011b:
+
+    ldy #5
+    @y_loop:
+    ldx #0
+    @x_loop:
+    ;get content byte
     lda (UNK_40), y
     sta nmi_queue+4, x
     iny
-    bne B26_0125
+
+    ;if y == 0, UNK_41 += 1
+    bne @not_zero
     inc UNK_41
-    B26_0125:
+    @not_zero:
+
+    ;if x != count, branch
     inx
     cpx nmi_queue+1
-    bne B26_011b
-    lda #.LOBYTE($8000)
+    bne @x_loop
+
+    ;end
+    lda #0
     sta nmi_queue+4, x
-    sta UNK_E5+1
-    lda #.HIBYTE($8000)
-    sta UNK_E5
-    dec UNK_42
-    beq B26_0151
+    sta nmi_data_offset
+
+    lda #$80
+    sta new_animation_timer
+
+    dec height
+    beq @exit
+
     jsr PpuSync
+
+    ;nmi_queue+2 += UNK_43
     clc
     lda UNK_43
     adc nmi_queue+3
     sta nmi_queue+3
-    lda #$00
+    lda #0
     adc nmi_queue+2
     sta nmi_queue+2
-    jmp B26_0119
-    B26_0151:
+    jmp @y_loop
+
+    @exit:
     rts
+
+.define ENDING_CMD_07_SETPAL .byte 7
 
 credits_cmd_set_palette:
     jsr PpuSync
@@ -386,9 +472,10 @@ credits_cmd_set_palette:
 
     lda #0
     sta nmi_queue+1 ; END
-    sta UNK_E5+1 ;.LOBYTE($8000)
-    lda #.HIBYTE($8000)
-    sta UNK_E5
+    sta nmi_data_offset
+
+    lda #$80
+    sta new_animation_timer
 
     ;set to after command
     ldy #$11
@@ -396,51 +483,55 @@ credits_cmd_set_palette:
     ;bye
     rts
 
+.macro ENDING_CMD_09_INITSPRITE id, tiles, arg_x, arg_y, sprite_pointer
+    .byte 9, id, tiles
+    .byte arg_x,arg_y
+    .addr sprite_pointer
+.endmacro
+
 credits_cmd_init_sprite:
     jsr PpuSync
 
     ;get next byte (Slot)
     iny
     lda (UNK_40), y
-
-    ;x = a * 8
+    ;x = a * .sizeof(SpriteObject)
     asl a
     asl a
     asl a
     tax
-
-    ;write byte
+    ;write Y position 9th bit
     lda (UNK_40), y
-    and #%10000000
-    sta shadow_something+1, x
+    and #SPRITE_OBJECT_OFFSCREEN_Y_DIR
+    sta SPRITE_OBJECTS+SpriteObject::oam_slot_flags, x
 
-    ;get next byte (????)
+    ;write tile count (incl. X position 9th bit)
     iny
     lda (UNK_40), y
-    sta shadow_something, x
+    sta SPRITE_OBJECTS+SpriteObject::count_flags, x
 
-    ;get next byte (X pos)
+    ;write posX
     iny
     lda (UNK_40), y
-    sta shadow_something+2, x
+    sta SPRITE_OBJECTS+SpriteObject::x_pos, x
 
-    ;get next byte (Y pos)
+    ;write posY
     iny
     lda (UNK_40), y
-    sta shadow_something+3, x
+    sta SPRITE_OBJECTS+SpriteObject::y_pos, x
 
-    ;get next addr (sprite pointer)
+    ;write sprite pointer
     iny
     lda (UNK_40), y
-    sta shadow_something+6, x
+    sta SPRITE_OBJECTS+SpriteObject::sprite_def_ptr, x
     iny
     lda (UNK_40), y
-    sta shadow_something+7, x
+    sta SPRITE_OBJECTS+SpriteObject::sprite_def_ptr+1, x
 
-    ;?
+    ;write velx,vely
     lda #0
-    sta shadow_something+4, x
-    sta shadow_something+5, x
+    sta SPRITE_OBJECTS+SpriteObject::x_vel, x
+    sta SPRITE_OBJECTS+SpriteObject::y_vel, x
 
     ;set to after macro
     ldy #7
@@ -448,13 +539,18 @@ credits_cmd_init_sprite:
     ;bye
     rts
 
+.macro ENDING_CMD_0A_MOVESPRITE id, offset, xvel, yvel
+    .byte $A, id
+    .word offset
+    .byte xvel, yvel
+.endmacro
+
 credits_cmd_move_sprite:
     jsr PpuSync
 
     ;get next byte (Slot)
     iny
     lda (UNK_40), y
-
     ;x = a * 8
     asl a
     asl a
@@ -464,31 +560,32 @@ credits_cmd_move_sprite:
     ;clear
     clc
 
-    ;get next word (def move)
+    ;pointer += UNK_40[y]
     iny
     lda (UNK_40), y
-    adc shadow_something+6, x
-    sta shadow_something+6, x
+    adc SPRITE_OBJECTS+SpriteObject::sprite_def_ptr, x
+    sta SPRITE_OBJECTS+SpriteObject::sprite_def_ptr, x
     iny
     lda (UNK_40), y
-    adc shadow_something+7, x
-    sta shadow_something+7, x
+    adc SPRITE_OBJECTS+SpriteObject::sprite_def_ptr+1, x
+    sta SPRITE_OBJECTS+SpriteObject::sprite_def_ptr+1, x
 
-    ;get next byte (move x)
+    ;velx = UNK_40[y]
     iny
     lda (UNK_40), y
-    sta shadow_something+4, x
-
-    ;get next byte (move y)
+    sta SPRITE_OBJECTS+SpriteObject::x_vel, x
+    ;vely = UNK_40[y]
     iny
     lda (UNK_40), y
-    sta shadow_something+5, x
+    sta SPRITE_OBJECTS+SpriteObject::y_vel, x
 
     ;bye
     ldy #6
     rts
 
-credits_cmd_play_sfx:
+.define ENDING_CMD_0B_PLAYMUS(sfx) .byte $B, sfx
+
+credits_cmd_play_mus:
     ;get and play byte
     iny
     lda (UNK_40), y
@@ -498,24 +595,36 @@ credits_cmd_play_sfx:
     iny
     rts
 
+.define ENDING_CMD_0E_BEGINLOOP(iterations) .byte $E, iterations
+
 credits_cmd_begin_loop:
     ;write byte to $47
     iny
     lda (UNK_40), y
-    sta UNK_47
+    sta loop_count
 
     ;bye
     iny
     rts
 
+.macro ENDING_CMD_0F_ENDLOOP pointer
+    .byte $F
+    .addr pointer
+.endmacro
+
 credits_cmd_end_loop:
     ;loop count down
-    dec UNK_47
+    dec loop_count
     ;if loop count == 0, do a jump to this pointer
     bne credits_cmd_unk8
     ;else, bye
     ldy #3
     rts
+
+.macro ENDING_CMD_08 arg1
+    .byte 8
+    .word arg1
+.endmacro
 
 credits_cmd_unk8:
     ;push addr to stack
@@ -533,38 +642,44 @@ credits_cmd_unk8:
     ldy #0
     rts
 
+.define ENDING_CMD_10_CLEARSPRITE(arg1) .byte $10, arg1
+
 credits_cmd_clear_sprite:
     jsr PpuSync
 
     ;get byte
     iny
     lda (UNK_40), y
-
-    ;x = a * 8
+    ;x = a * .sizeof(SpriteObject)
     asl a
     asl a
     asl a
     tax
-
-    ;reset
+    ;set tiles to 0
     lda #0
-    sta shadow_something, x
+    sta SPRITE_OBJECTS+SpriteObject::count_flags, x
+
     iny
     rts
+
+.macro ENDING_CMD_11_DRAWTEXT stringId
+    .byte $11
+    .word stringId
+.endmacro
 
 credits_cmd_draw_text:
     ;get next word
     iny
     lda (UNK_40), y
-    sta UNK_74
+    sta tilepack_ptr
     iny
     lda (UNK_40), y
     sta UNK_73
 
     lda #2
-    sta UNK_76
+    sta ntbl_x
     lda #$13
-    sta UNK_76+1
+    sta ntbl_x+1
 
     lda #$1c
     sta UNK_70
@@ -574,11 +689,11 @@ credits_cmd_draw_text:
     @loop:
     jsr GetTextData
 
-    jsr B30_06db
+    jsr DrawTilepackClear
     cmp #0
     beq @break
     ldy #0
-    lda (UNK_74), y
+    lda (tilepack_ptr), y
     cmp #0
     bne @loop
 
@@ -604,10 +719,11 @@ credits_cmd_draw_text:
 
     ldx #2
     @loop2:
-    lda #.LOBYTE($8000)
-    sta UNK_E5+1
-    lda #.HIBYTE($8000)
-    sta UNK_E5
+    lda #0
+    sta nmi_data_offset
+
+    lda #$80
+    sta new_animation_timer
 
     dex
     beq @break2
@@ -624,14 +740,20 @@ credits_cmd_draw_text:
     jmp @loop2
 
     @break2:
-    ldy #$03
+    ldy #3
     rts
+
+.macro ENDING_CMD_12_DRAWTEXTXY stringId, arg_x, arg_y
+    .byte $12
+    .word stringId
+    .byte arg_x,arg_y
+.endmacro
 
 credits_cmd_draw_text_xy:
     ;get next umsg
     iny
     lda (UNK_40), y
-    sta UNK_74
+    sta tilepack_ptr
     iny
     lda (UNK_40), y
     sta UNK_73
@@ -639,23 +761,25 @@ credits_cmd_draw_text_xy:
     ;get next byte (x pos)
     iny
     lda (UNK_40), y
-    sta UNK_76
+    sta ntbl_x
 
     ;get next byte (y pos)
     iny
     lda (UNK_40), y
-    sta UNK_76+1
+    sta ntbl_x+1
 
     lda #0
     sta UNK_70
     sta UNK_71
 
     jsr GetTextData
-    jsr B30_06db
+    jsr DrawTilepackClear
 
     ;bye
-    ldy #$05
+    ldy #5
     rts
+
+.define ENDING_CMD_13_FADEIN .byte $13
 
 credits_cmd_fade_in:
     jsr RestoreAndUpdatePalette
@@ -670,91 +794,9 @@ credits_generic_sprite_pal:
     .byte $0f, $0f, $24, $37
     .byte $0f, $0f, $12, $37
 
-.define ENDING_CMD_00_END .byte 0
-
-.define ENDING_CMD_01_DELAY(frames) .byte 1, frames
-
-.define ENDING_CMD_02(arg1) .byte 2, arg1
-
-.define ENDING_CMD_03_FADEOUT .byte 3
-
-.macro ENDING_CMD_04_LOADTILESETS arg1, arg2, arg3, arg4
-    .byte 4
-    .byte arg1
-    .byte arg2
-    .byte arg3
-    .byte arg4
-.endmacro
-
-.macro ENDING_CMD_05_LOADBG2MAP arg1, arg2, arg3
-    .byte 5
-    .addr arg1
-    .byte arg2, arg3
-.endmacro
-
-.macro ENDING_CMD_06_SETMETATILEPROPERTIES arg1, arg2, arg3
-    .byte 6
-    .addr arg1
-    .byte arg2, arg3
-.endmacro
-
-.define ENDING_CMD_07_SETPAL .byte 7
-
-.macro ENDING_CMD_08 arg1
-    .byte 8
-    .word arg1
-.endmacro
-
-.macro ENDING_CMD_09_INITSPRITE id, tiles, arg_x, arg_y, sprite_pointer
-    .byte 9, id, tiles
-    .byte arg_x,arg_y
-    .addr sprite_pointer
-.endmacro
-
-.macro ENDING_CMD_0A_MOVESPRITE id, arg2, arg3, arg4
-    .byte $A, id
-    .word arg2
-    .byte arg3, arg4
-.endmacro
-
-.define ENDING_CMD_0B_PLAYSFX(arg1) .byte $B, arg1
-
-.define ENDING_CMD_0C_LOADSECONDARYSPRITETILES(arg1) .byte $C, arg1
-
-.macro ENDING_CMD_0D_SETALLTILESETS arg1, arg2, arg3, arg4, arg5, arg6
-    .byte $D
-    .byte arg1, arg2
-    .byte arg3, arg4
-    .byte arg5, arg6
-.endmacro
-
-.define ENDING_CMD_0E_BEGINLOOP(iterations) .byte $E, iterations
-
-.macro ENDING_CMD_0F_ENDLOOP pointer
-    .byte $F
-    .addr pointer
-.endmacro
-
-.define ENDING_CMD_10_CLEARSPRITE(arg1) .byte $10, arg1
-
-.macro ENDING_CMD_11_DRAWTEXT stringId
-    .byte $11
-    .word stringId
-.endmacro
-
-.macro ENDING_CMD_12_DRAWTEXTXY stringId, arg_x, arg_y
-    .byte $12
-    .word stringId
-    .byte arg_x,arg_y
-.endmacro
-
-.define ENDING_CMD_13_FADEIN .byte $13
-
-.define ENDING_CMD_14_DELAYREAL(frames) .byte $14, frames
-
 ;byte code begin
 Credits_Script:
-    ENDING_CMD_0B_PLAYSFX 8
+    ENDING_CMD_0B_PLAYMUS 8
     ENDING_CMD_04_LOADTILESETS $02, $00, $D0, $D2
     ENDING_CMD_05_LOADBG2MAP $2088, 20, 16
         .byte $6E,$6E,$69,$6A,$69,$6A,$67,$68,$6E,$6E,$63,$46,$43,$43,$47,$6E,$69,$6A,$67,$68
@@ -785,7 +827,7 @@ Credits_Script:
     ;lloyd
     ENDING_CMD_09_INITSPRITE 2, $04, $60, $30, SPRITEDEF_CREDITS_lloyd_u1
     ;teddy
-    ENDING_CMD_09_INITSPRITE 3, $04, $80, $30, SPRITEDEF_18
+    ENDING_CMD_09_INITSPRITE 3, $04, $80, $30, SPRITEDEF_TEDDY
     ;dog
     ENDING_CMD_09_INITSPRITE 4, $04, $30, $40, SPRITEDEF_CREDITS_UNK36
     ENDING_CMD_11_DRAWTEXT UMSG::CREDITS_1
@@ -799,13 +841,13 @@ Credits_Script:
     ;face down
     ENDING_CMD_0A_MOVESPRITE 1, 4*2, 0, 0
     ENDING_CMD_0A_MOVESPRITE 2, 4*2, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 3, SPRITEDEF_1C-SPRITEDEF_18, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 3, 4*4, 0, 0
     ENDING_CMD_01_DELAY 120
 
     ENDING_CMD_01_DELAY 8
-    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_6-SPRITEDEF_CREDITS_ninten_d1, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_E-SPRITEDEF_CREDITS_ana_d1, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_16-SPRITEDEF_CREDITS_lloyd_d1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 0, (SPRITEDEF_NINTEN+(6*4))-SPRITEDEF_CREDITS_ninten_d1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 1, (SPRITEDEF_ANA+(6*4))-SPRITEDEF_CREDITS_ana_d1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 2, (SPRITEDEF_LLOYD+(6*4))-SPRITEDEF_CREDITS_lloyd_d1, 0, 0
     ENDING_CMD_0A_MOVESPRITE 3, 2*4, 0, 0
     ENDING_CMD_04_LOADTILESETS $02, $00, $60, $d2
     ENDING_CMD_07_SETPAL
@@ -814,9 +856,9 @@ Credits_Script:
         .byte $0F,$28,$06,$17
         .byte $0F,$28,$30,$13
     ENDING_CMD_01_DELAY 8
-    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_CREDITS_ninten_u1-SPRITEDEF_6, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_CREDITS_ana_u1-SPRITEDEF_E, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_CREDITS_lloyd_u1-SPRITEDEF_16, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_CREDITS_ninten_u1-(SPRITEDEF_NINTEN+(6*4)), 0, 0
+    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_CREDITS_ana_u1-(SPRITEDEF_ANA+(6*4)), 0, 0
+    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_CREDITS_lloyd_u1-(SPRITEDEF_LLOYD+(6*4)), 0, 0
     ENDING_CMD_0A_MOVESPRITE 3, -6*4, 0, 0
     ENDING_CMD_04_LOADTILESETS $02, $00, $D0, $D2
     ENDING_CMD_07_SETPAL
@@ -827,9 +869,9 @@ Credits_Script:
 
 
     ENDING_CMD_01_DELAY 8
-    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_2-SPRITEDEF_CREDITS_ninten_u1, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_A-SPRITEDEF_CREDITS_ana_u1, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_12-SPRITEDEF_CREDITS_lloyd_u1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 0, (SPRITEDEF_NINTEN+(2*4))-SPRITEDEF_CREDITS_ninten_u1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 1, (SPRITEDEF_ANA+(2*4))-SPRITEDEF_CREDITS_ana_u1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 2, (SPRITEDEF_LLOYD+(2*4))-SPRITEDEF_CREDITS_lloyd_u1, 0, 0
     ENDING_CMD_0A_MOVESPRITE 3, 2*4, 0, 0
     ENDING_CMD_04_LOADTILESETS $02, $00, $60, $d2
     ENDING_CMD_07_SETPAL
@@ -838,9 +880,9 @@ Credits_Script:
         .byte $0F,$28,$06,$17
         .byte $0F,$28,$30,$13
     ENDING_CMD_01_DELAY 8
-    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_CREDITS_ninten_d1-SPRITEDEF_2, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_CREDITS_ana_d1-SPRITEDEF_A, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_CREDITS_lloyd_d1-SPRITEDEF_12, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_CREDITS_ninten_d1-(SPRITEDEF_NINTEN+(2*4)), 0, 0
+    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_CREDITS_ana_d1-(SPRITEDEF_ANA+(2*4)), 0, 0
+    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_CREDITS_lloyd_d1-(SPRITEDEF_LLOYD+(2*4)), 0, 0
     ENDING_CMD_0A_MOVESPRITE 3, 2*4, 0, 0
     ENDING_CMD_04_LOADTILESETS $02, $00, $D0, $D2
     ENDING_CMD_07_SETPAL
@@ -850,9 +892,9 @@ Credits_Script:
         .byte $0F,$3A,$30,$12
     ENDING_CMD_01_DELAY 8
 
-    ENDING_CMD_0A_MOVESPRITE 0, SPRITEDEF_NINTENDOWN1-SPRITEDEF_CREDITS_ninten_d1, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 1, SPRITEDEF_C-SPRITEDEF_CREDITS_ana_d1, 0, 0
-    ENDING_CMD_0A_MOVESPRITE 2, SPRITEDEF_14-SPRITEDEF_CREDITS_lloyd_d1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 0, (SPRITEDEF_NINTEN+(4*4))-SPRITEDEF_CREDITS_ninten_d1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 1, (SPRITEDEF_ANA+(4*4))-SPRITEDEF_CREDITS_ana_d1, 0, 0
+    ENDING_CMD_0A_MOVESPRITE 2, (SPRITEDEF_LLOYD+(4*4))-SPRITEDEF_CREDITS_lloyd_d1, 0, 0
 
     ENDING_CMD_04_LOADTILESETS $02, $00, $60, $d2
     ENDING_CMD_07_SETPAL
@@ -1013,7 +1055,7 @@ Credits_end:
     ENDING_CMD_00_END
 
 ActualCredits_Script:
-    ENDING_CMD_0B_PLAYSFX 45
+    ENDING_CMD_0B_PLAYMUS 45
     ENDING_CMD_0D_SETALLTILESETS $dc, $dd, $da, $db, $60, $64
 
     ENDING_CMD_05_LOADBG2MAP $2000, 32, 32
@@ -1037,13 +1079,13 @@ ActualCredits_Script:
     ENDING_CMD_14_DELAYREAL 240
     ENDING_CMD_14_DELAYREAL 240
     ;ninten
-    ENDING_CMD_09_INITSPRITE 0, $04, $40, $C0, SPRITEDEF_0
+    ENDING_CMD_09_INITSPRITE 0, $04, $40, $C0, SPRITEDEF_NINTEN
     ;ana
-    ENDING_CMD_09_INITSPRITE 1, $04, $58, $C0, SPRITEDEF_8
+    ENDING_CMD_09_INITSPRITE 1, $04, $58, $C0, SPRITEDEF_ANA
     ;lloyd
-    ENDING_CMD_09_INITSPRITE 2, $04, $78, $C0, SPRITEDEF_10
+    ENDING_CMD_09_INITSPRITE 2, $04, $78, $C0, SPRITEDEF_LLOYD
     ;teddy
-    ENDING_CMD_09_INITSPRITE 3, $04, $90, $C0, SPRITEDEF_18
+    ENDING_CMD_09_INITSPRITE 3, $04, $90, $C0, SPRITEDEF_TEDDY
 
 
     ENDING_CMD_0E_BEGINLOOP 4

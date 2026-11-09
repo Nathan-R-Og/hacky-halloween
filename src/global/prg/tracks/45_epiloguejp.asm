@@ -339,8 +339,8 @@ mus_epiloguejp_noise_phrase01:
     Note_Noise 0, 2 ;hat
     Note_Length nl_eighth
     Note_Noise 2, 0 ;snare
-    Note_Noise 0, 1 ;rest
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
+    Noise_Rest
     Note_Noise 2, 0 ;snare
     Note_Length nl_half
     Note_Noise 0, 2 ;hat
@@ -349,9 +349,9 @@ mus_epiloguejp_noise_phrase01:
 
 mus_epiloguejp_noise_phrase02:
     Note_Length nl_whole
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
     Note_Length nl_half
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
     Note_Length nl_quarter
     Note_Noise 0, 2 ;hat
     Note_Length nl_eighth

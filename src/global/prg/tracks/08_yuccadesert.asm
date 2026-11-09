@@ -227,33 +227,33 @@ B28_1BAC2:
     Note_Length nl_half
     Note_Noise 0, $19
     Note_Length nl_quarter
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
     Note_Length nl_half
     Note_Noise 0, $19
     Note_Length nl_quarter
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
     Note_Length nl_half
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
 
     Note_Noise 0, $19
     Note_Length nl_quarter
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
     Note_Length nl_half
     Note_Noise 0, $19
     Note_Length nl_quarter
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
     Note_Length nl_half
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
 
 
-    Note_Noise 0, 1 ;rest
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
+    Noise_Rest
     Note_Noise 0, $19
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
 
     Note_Length nl_whole
-    Note_Noise 0, 1 ;rest
-    Note_Noise 0, 1 ;rest
+    Noise_Rest
+    Noise_Rest
 
 
     Track_End

@@ -339,5 +339,5 @@ Note_Noise 0, $13
 Note_Noise 0, $13
 Note_Noise 0, $13
 Note_Length nl_half
-Note_Noise 0, 1 ;rest
+Noise_Rest
 Track_End

@@ -24,11 +24,16 @@ battle_message_speed:
 .byte 1
 
 repel_counter: .byte $00
+
 .byte $00
-.byte $6B ;chunk id for non-moved Giegue rock
-.byte $84
-.byte $1C
-.byte $36 ;chunk id for non-destroyed railway
+;Giegue Rock Not-Moved Chunk ID
+.byte $6B ;ts2
+;area encounter defs for the zoo, since it changes based on flags
+areaEncounterDef 4, $10 ;area $29
+areaEncounterDef 4, 3 ;area $d
+;Duncan Factory Rocket Not-Moved Chunk ID
+.byte $42 ;ts2
+
 big_bag_uses: .byte 30
 
 player_name:
@@ -45,7 +50,11 @@ player_name_end:
 .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 
 preferences:
+.ifdef VER_JP
+.byte 0,0,0,0
+.else
 .byte %00001000 ;B button use
 .byte %00100000 ;START button use
 .byte %10000000 ;SELECT button use
 .byte %00001000 ;Fight message speed preset
+.endif
